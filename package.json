@@ -1,0 +1,32 @@
+{
+  "name": "bun-server-project",
+  "version": "0.0.1",
+  "description": "bun server project",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "preinstall": "npx only-allow bun",
+    "prepare": "git config core.hooksPath .husky"
+  },
+  "keywords": [],
+  "author": "dangaogit",
+  "workspaces": {
+    "packages": [
+      "packages/**",
+      "examples/**",
+      "benchmark/**"
+    ],
+    "catalog": {
+      "typescript": "5.9.3",
+      "reflect-metadata": "^0.2.2",
+      "@types/bun": "latest"
+    },
+    "catalogs": {}
+  },
+  "dependencies": {
+    "@types/bun": "catalog:"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}
