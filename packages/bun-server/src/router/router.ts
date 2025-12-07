@@ -110,14 +110,21 @@ export class Router {
    */
   public async handle(context: Context): Promise<Response | undefined> {
     const method = context.method as HttpMethod;
-    const route = this.findRoute(method, context.path);
+    let path = context.path;
+    
+    // 规范化路径：移除尾部斜杠（除非是根路径）
+    if (path.length > 1 && path.endsWith('/')) {
+      path = path.slice(0, -1);
+    }
+    
+    const route = this.findRoute(method, path);
 
     if (!route) {
       return undefined;
     }
 
     // 提取路径参数并设置到 context
-    const match = route.match(method, context.path);
+    const match = route.match(method, path);
     if (match.matched) {
       context.params = match.params;
     }

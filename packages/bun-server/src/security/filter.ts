@@ -132,7 +132,8 @@ function extractTokenFromHeader(ctx: Context): string | null {
  * 获取需要的角色
  */
 function getRequiredRoles(target: any, propertyKey: string | symbol): string[] {
-  const metadata = require('../auth/decorators').getAuthMetadata(target, propertyKey);
+  const { getAuthMetadata } = require('../auth/decorators');
+  const metadata = getAuthMetadata(target, propertyKey);
   return metadata?.roles || [];
 }
 
