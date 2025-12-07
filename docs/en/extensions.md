@@ -317,7 +317,9 @@ import {
   Module,
   LoggerModule,
   SwaggerModule,
+  SecurityModule,
   LogLevel,
+  Auth,
 } from '@dangao/bun-server';
 
 // Configure modules
@@ -331,9 +333,25 @@ SwaggerModule.forRoot({
   uiPath: '/swagger',
 });
 
+SecurityModule.forRoot({
+  jwt: {
+    secret: 'your-secret-key',
+    accessTokenExpiresIn: 3600,
+  },
+  oauth2Clients: [
+    {
+      clientId: 'my-client',
+      clientSecret: 'my-secret',
+      redirectUris: ['http://localhost:3000/callback'],
+      grantTypes: ['authorization_code'],
+    },
+  ],
+  excludePaths: ['/api/public'],
+});
+
 // Application module
 @Module({
-  imports: [LoggerModule, SwaggerModule],
+  imports: [LoggerModule, SwaggerModule, SecurityModule],
   controllers: [UserController, OrderController],
   providers: [UserService, OrderService],
 })
