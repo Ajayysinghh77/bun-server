@@ -127,6 +127,13 @@ export class SecurityModule {
       controllers: [...(existingMetadata.controllers || []), ...controllers],
       providers: [...(existingMetadata.providers || []), ...providers],
       middlewares: [...(existingMetadata.middlewares || []), ...middlewares],
+      // 导出服务，让其他模块可以使用
+      exports: [
+        ...(existingMetadata.exports || []),
+        JWT_UTIL_TOKEN,
+        OAUTH2_SERVICE_TOKEN,
+        AuthenticationManager,
+      ],
     };
     Reflect.defineMetadata(MODULE_METADATA_KEY, metadata, SecurityModule);
 
