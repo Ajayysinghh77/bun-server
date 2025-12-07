@@ -174,11 +174,16 @@ export class Context {
    * @returns Response 对象
    */
   public createResponse(body?: unknown, init?: ResponseInit): Response {
+    // 如果已经是 Response 对象，直接返回
+    if (body instanceof Response) {
+      return body;
+    }
+
     const headers = new Headers(this.responseHeaders);
     
     // 如果 body 是对象，自动序列化为 JSON
     if (body !== undefined && body !== null) {
-      if (typeof body === 'object' && !(body instanceof Response) && !(body instanceof ArrayBuffer)) {
+      if (typeof body === 'object' && !(body instanceof ArrayBuffer) && !(body instanceof Blob)) {
         headers.set('Content-Type', 'application/json');
         const jsonString = JSON.stringify(body);
         return new Response(jsonString, {

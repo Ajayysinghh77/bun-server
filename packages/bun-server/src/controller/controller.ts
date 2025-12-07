@@ -157,6 +157,11 @@ export class ControllerRegistry {
           // 处理异步结果
           const responseData = await Promise.resolve(result);
 
+          // 如果已经是 Response 对象，直接返回
+          if (responseData instanceof Response) {
+            return responseData;
+          }
+
           // 创建响应
           return context.createResponse(responseData);
         } catch (error) {
