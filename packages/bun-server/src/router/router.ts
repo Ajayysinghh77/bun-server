@@ -16,6 +16,16 @@ export class Router {
   private readonly dynamicRoutes: Route[] = [];
 
   /**
+   * 规范化路径（移除尾部斜杠，除非是根路径）
+   */
+  private normalizePath(path: string): string {
+    if (path.length > 1 && path.endsWith('/')) {
+      return path.slice(0, -1);
+    }
+    return path;
+  }
+
+  /**
    * 注册路由
    * @param method - HTTP 方法
    * @param path - 路由路径
@@ -27,7 +37,9 @@ export class Router {
     handler: RouteHandler,
     middlewares: Middleware[] = [],
   ): void {
-    const route = new Route(method, path, handler, middlewares);
+    // 规范化路径
+    const normalizedPath = this.normalizePath(path);
+    const route = new Route(method, normalizedPath, handler, middlewares);
     this.routes.push(route);
     const staticKey = route.getStaticKey();
     if (staticKey) {
@@ -110,12 +122,8 @@ export class Router {
    */
   public async handle(context: Context): Promise<Response | undefined> {
     const method = context.method as HttpMethod;
-    let path = context.path;
-    
     // 规范化路径：移除尾部斜杠（除非是根路径）
-    if (path.length > 1 && path.endsWith('/')) {
-      path = path.slice(0, -1);
-    }
+    const path = this.normalizePath(context.path);
     
     const route = this.findRoute(method, path);
 
