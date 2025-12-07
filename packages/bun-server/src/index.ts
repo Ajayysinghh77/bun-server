@@ -102,23 +102,17 @@ export {
   type Credentials,
   type AccessDecisionManager,
 } from './security';
-// Auth 模块（保留向后兼容）
+// Auth 模块（底层实现，供 Security 模块使用）
 export {
-  AuthModule,
-  AuthExtension,
   JWTUtil,
   OAuth2Service,
   OAuth2Controller,
-  createAuthMiddleware,
   Auth,
   getAuthMetadata,
   requiresAuth,
   checkRoles,
   OAUTH2_SERVICE_TOKEN,
   JWT_UTIL_TOKEN,
-  type AuthModuleOptions,
-  type AuthModuleConfig,
-  type AuthExtensionOptions,
   type JWTConfig,
   type JWTPayload,
   type OAuth2Client,
@@ -128,9 +122,6 @@ export {
   type UserInfo,
   type AuthContext,
   type AuthConfig,
-  type AuthMiddlewareOptions,
-  type AuthModuleUserProvider,
-  type AuthExtensionUserProvider,
 } from './auth';
 export {
   PerformanceHarness,
