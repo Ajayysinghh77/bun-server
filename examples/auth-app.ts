@@ -492,7 +492,7 @@ class FrontendController {
    * OAuth2 回调页面
    */
   @GET('/callback')
-  public callback(@Query('code') code: string, @Query('state') state: string) {
+  public callback(@Query('code') code?: string, @Query('state') state?: string) {
     return ResponseBuilder.html(`
 <!DOCTYPE html>
 <html lang="zh-CN">
