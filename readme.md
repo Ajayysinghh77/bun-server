@@ -44,6 +44,7 @@
 - ✅ **输入校验**：声明式验证装饰器，直连 `ValidationError` 与异常过滤器。
 - 📡 **WebSocket**：`@WebSocketGateway`、`@OnMessage` 等装饰器级开发体验。
 - 📖 **Swagger/OpenAPI**：内置 Swagger 插件，支持 `@ApiTags`、`@ApiOperation`、`@ApiParam`、`@ApiBody`、`@ApiResponse` 等装饰器，自动生成 API 文档和 Swagger UI。
+- 🔐 **安全认证**：内置 SecurityModule，支持 JWT 和 OAuth2 认证，提供 `@Auth()` 装饰器进行角色权限控制。
 - 📚 **示例与文档**：多语言文档、基础/完整示例、基准脚本与最佳实践。
 
 ## 架构总览
