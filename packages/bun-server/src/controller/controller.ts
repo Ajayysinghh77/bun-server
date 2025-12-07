@@ -224,6 +224,14 @@ export class ControllerRegistry {
   }
 
   /**
+   * 获取所有已注册的控制器类
+   * @returns 控制器类数组
+   */
+  public getRegisteredControllers(): Constructor<unknown>[] {
+    return Array.from(this.controllerContainers.keys());
+  }
+
+  /**
    * 清除所有控制器注册和容器状态（主要用于测试）
    */
   public clear(): void {

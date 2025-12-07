@@ -64,6 +64,22 @@ export {
   type LogEntry,
 } from './extensions';
 export {
+  SwaggerExtension,
+  SwaggerGenerator,
+  createSwaggerUIMiddleware,
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiBody,
+  ApiResponse,
+  type SwaggerOptions,
+  type SwaggerDocument,
+  type ApiOperationMetadata,
+  type ApiParamMetadata,
+  type ApiBodyMetadata,
+  type ApiResponseMetadata,
+} from './swagger';
+export {
   PerformanceHarness,
   StressTester,
   type BenchmarkResult,

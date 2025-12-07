@@ -1,9 +1,15 @@
 
 import {
   Application,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
   Body,
   Controller,
   createLoggerMiddleware,
+  createSwaggerUIMiddleware,
   GET,
   Inject,
   Injectable,
@@ -14,6 +20,7 @@ import {
   Module,
   Param,
   POST,
+  SwaggerExtension,
   Validate,
 } from "@dangao/bun-server";
 import type { Logger } from "@dangao/logsmith";
@@ -38,6 +45,7 @@ class UserService {
 }
 
 @Controller("/api/users")
+@ApiTags("Users")
 class UserController {
   public constructor(
     @Inject(UserService) private readonly service: UserService,
@@ -45,6 +53,32 @@ class UserController {
   ) {}
 
   @GET("/:id")
+  @ApiOperation({
+    summary: "Get user by ID",
+    description: "Retrieve a user by their unique identifier",
+    operationId: "getUser",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "User found",
+    schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        name: { type: "string" },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: "User not found",
+    schema: {
+      type: "object",
+      properties: {
+        error: { type: "string" },
+      },
+    },
+  })
   public getUser(@Param("id") id: string) {
     this.logger.info("Fetch user", { id });
     const user = this.service.find(id);
@@ -55,6 +89,33 @@ class UserController {
   }
 
   @POST("/")
+  @ApiOperation({
+    summary: "Create a new user",
+    description: "Create a new user with the provided name",
+    operationId: "createUser",
+  })
+  @ApiBody({
+    description: "User creation data",
+    required: true,
+    schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "User name" },
+      },
+      required: ["name"],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: "User created successfully",
+    schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        name: { type: "string" },
+      },
+    },
+  })
   public createUser(@Body("name") @Validate(IsString()) name: string) {
     this.logger.info("Create user", { name });
     return this.service.create(name);
@@ -70,12 +131,44 @@ class UserModule {}
 
 const port = Number(process.env.PORT ?? 3100);
 const app = new Application({ port });
+
+// 注册日志扩展
 app.registerExtension(
   new LoggerExtension({
     prefix: "BasicExample",
     level: LogLevel.DEBUG,
   }),
 );
+
+// 注册 Swagger 扩展
+const swaggerExtension = new SwaggerExtension({
+  info: {
+    title: "Basic App API",
+    version: "1.0.0",
+    description: "A basic example API with Swagger documentation",
+  },
+  servers: [
+    {
+      url: `http://localhost:${port}`,
+      description: "Local development server",
+    },
+  ],
+});
+app.registerExtension(swaggerExtension);
+
+// 注册 Swagger UI 中间件
+app.use(
+  createSwaggerUIMiddleware(swaggerExtension, {
+    uiPath: "/swagger",
+    jsonPath: "/swagger.json",
+    title: "Basic App API Documentation",
+  }),
+);
+
 app.use(createLoggerMiddleware({ prefix: "[BasicExample]" }));
 app.registerModule(UserModule);
 app.listen(port);
+
+console.log(`🚀 Server running on http://localhost:${port}`);
+console.log(`📚 Swagger UI: http://localhost:${port}/swagger`);
+console.log(`📄 Swagger JSON: http://localhost:${port}/swagger.json`);
