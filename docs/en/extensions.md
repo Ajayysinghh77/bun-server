@@ -251,6 +251,64 @@ SwaggerModule.forRoot({
 class AppModule {}
 ```
 
+#### SecurityModule (Recommended)
+
+SecurityModule is a unified security module, designed following Spring Security architecture, supporting multiple authentication methods:
+
+```typescript
+import { SecurityModule, Module, Auth } from '@dangao/bun-server';
+
+// Configure security module
+SecurityModule.forRoot({
+  jwt: {
+    secret: 'your-secret-key',
+    accessTokenExpiresIn: 3600,
+    refreshTokenExpiresIn: 86400 * 7,
+  },
+  oauth2Clients: [
+    {
+      clientId: 'my-client',
+      clientSecret: 'my-secret',
+      redirectUris: ['http://localhost:3000/callback'],
+      grantTypes: ['authorization_code', 'refresh_token'],
+    },
+  ],
+  enableOAuth2Endpoints: true,
+  excludePaths: ['/api/public'],
+  defaultAuthRequired: false, // Default no auth required, controlled by @Auth() decorator
+});
+
+@Module({
+  imports: [SecurityModule], // Import security module
+  controllers: [UserController],
+  providers: [UserService],
+})
+class AppModule {}
+
+// Use @Auth() decorator to control access
+@Controller('/api/users')
+class UserController {
+  @GET('/me')
+  @Auth() // Requires authentication
+  public getMe() {
+    return { user: 'current user' };
+  }
+
+  @GET('/admin')
+  @Auth({ roles: ['admin'] }) // Requires admin role
+  public getAdmin() {
+    return { message: 'admin only' };
+  }
+}
+```
+
+**SecurityModule Architecture Features**:
+- **Core Abstraction**: `AuthenticationManager` manages authentication flow
+- **Authentication Providers**: Supports multiple auth methods (JWT, OAuth2, etc.)
+- **Access Decision**: `AccessDecisionManager` handles authorization decisions
+- **Security Context**: `SecurityContext` manages current authentication state
+- **Extensible**: Can customize authentication providers and access decision managers
+
 ### Complete Example
 
 ```typescript
