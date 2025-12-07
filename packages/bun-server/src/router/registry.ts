@@ -30,14 +30,19 @@ export class RouteRegistry {
    * @param method - HTTP 方法
    * @param path - 路由路径
    * @param handler - 路由处理器
+   * @param middlewares - 中间件列表
+   * @param controllerClass - 控制器类（可选）
+   * @param methodName - 方法名（可选）
    */
   public register(
     method: HttpMethod,
     path: string,
     handler: RouteHandler,
     middlewares: Middleware[] = [],
+    controllerClass?: new (...args: unknown[]) => unknown,
+    methodName?: string,
   ): void {
-    this.router.register(method, path, handler, middlewares);
+    this.router.register(method, path, handler, middlewares, controllerClass, methodName);
   }
 
   /**

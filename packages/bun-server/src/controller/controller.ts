@@ -126,12 +126,6 @@ export class ControllerRegistry {
       // 创建路由处理器，支持控制器方法调用
       const handler = async (context: Context): Promise<Response> => {
         try {
-          // 将控制器和方法信息附加到 context，供中间件使用
-          (context as any).routeHandler = {
-            controller: controllerClass,
-            method: propertyKey,
-          };
-
           // 从容器解析控制器实例
           const controllerContainer = this.controllerContainers.get(controllerClass) ?? this.container;
           const controllerInstance = controllerContainer.resolve(controllerClass);
@@ -200,8 +194,8 @@ export class ControllerRegistry {
         middlewares.push(...getMethodMiddlewares(prototype, propertyKey));
       }
 
-      // 注册路由
-      registry.register(route.method, fullPath, handler, middlewares);
+      // 注册路由，传递控制器和方法信息
+      registry.register(route.method, fullPath, handler, middlewares, controllerClass, propertyKey);
     }
   }
 

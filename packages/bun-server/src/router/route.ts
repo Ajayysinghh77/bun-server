@@ -24,6 +24,16 @@ export class Route {
   public readonly handler: RouteHandler;
 
   /**
+   * 控制器类（可选，用于控制器路由）
+   */
+  public readonly controllerClass?: new (...args: unknown[]) => unknown;
+
+  /**
+   * 方法名（可选，用于控制器路由）
+   */
+  public readonly methodName?: string;
+
+  /**
    * 路径模式（用于匹配）
    */
   private readonly pattern: RegExp;
@@ -42,10 +52,14 @@ export class Route {
     path: string,
     handler: RouteHandler,
     middlewares: Middleware[] = [],
+    controllerClass?: new (...args: unknown[]) => unknown,
+    methodName?: string,
   ) {
     this.method = method;
     this.path = path;
     this.handler = handler;
+    this.controllerClass = controllerClass;
+    this.methodName = methodName;
 
     // 解析路径参数
     const { pattern, paramNames } = this.parsePath(path);

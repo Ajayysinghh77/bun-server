@@ -30,16 +30,21 @@ export class Router {
    * @param method - HTTP 方法
    * @param path - 路由路径
    * @param handler - 路由处理器
+   * @param middlewares - 中间件列表
+   * @param controllerClass - 控制器类（可选）
+   * @param methodName - 方法名（可选）
    */
   public register(
     method: HttpMethod,
     path: string,
     handler: RouteHandler,
     middlewares: Middleware[] = [],
+    controllerClass?: new (...args: unknown[]) => unknown,
+    methodName?: string,
   ): void {
     // 规范化路径
     const normalizedPath = this.normalizePath(path);
-    const route = new Route(method, normalizedPath, handler, middlewares);
+    const route = new Route(method, normalizedPath, handler, middlewares, controllerClass, methodName);
     this.routes.push(route);
     const staticKey = route.getStaticKey();
     if (staticKey) {
@@ -135,6 +140,14 @@ export class Router {
     const match = route.match(method, path);
     if (match.matched) {
       context.params = match.params;
+    }
+
+    // 将路由信息附加到 context，供中间件使用
+    if (route.controllerClass && route.methodName) {
+      (context as any).routeHandler = {
+        controller: route.controllerClass,
+        method: route.methodName,
+      };
     }
 
     return await route.execute(context);
