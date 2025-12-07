@@ -130,6 +130,7 @@ bun --cwd=benchmark run bench:di     # 仅运行 DI 基准
 - `examples/basic-app.ts`：最小可运行示例，覆盖 DI + Logger + Middleware + Swagger。
 - `examples/full-app.ts`：包含验证、文件上传、WebSocket、复杂控制器。
 - `examples/multi-module-app.ts`：多模块示例，展示模块间的依赖关系和服务共享。
+- `examples/auth-app.ts`：完整的认证演示，包含 JWT + OAuth2 认证流程，前端页面演示。
 - `packages/bun-server/src/extensions/`：官方扩展（如
   LoggerExtension、SwaggerExtension），可用于注册第三方能力。
 
