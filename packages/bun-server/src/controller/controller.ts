@@ -165,26 +165,9 @@ export class ControllerRegistry {
           // 创建响应
           return context.createResponse(responseData);
         } catch (error) {
-          // 错误处理
-          if (error instanceof ValidationError) {
-            context.setStatus(400);
-            return context.createResponse({
-              error: error.message,
-              issues: error.issues,
-            });
-          }
-
-          if (error instanceof HttpException) {
-            context.setStatus(error.status);
-            return context.createResponse({
-              error: error.message,
-              details: error.details,
-            });
-          }
-
-          context.setStatus(500);
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          return context.createResponse({ error: errorMessage });
+          // 使用全局错误处理器，确保错误码和国际化正确应用
+          const { handleError } = await import('../error/handler');
+          return await handleError(error, context);
         }
       };
 

@@ -3,6 +3,7 @@ import { ValidationError } from "../../validation";
 import { LoggerManager } from "@dangao/logsmith";
 import { HttpException } from "../../error";
 import { handleError } from "../../error/handler";
+import { ErrorMessageI18n } from "../../error/i18n";
 
 export interface ErrorHandlerOptions {
   /**
@@ -64,16 +65,8 @@ export function createErrorHandlingMiddleware(
       }
 
       if (error instanceof HttpException) {
-        if (!expose) {
-          return await handleError(error, context);
-        }
-        return context.createResponse(
-          {
-            error: error.message,
-            details: error.details,
-          },
-          { status: error.status },
-        );
+        // 统一使用 handleError 处理，它已经包含了错误码和国际化逻辑
+        return await handleError(error, context);
       }
 
       if (error instanceof Error && !expose) {

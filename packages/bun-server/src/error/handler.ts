@@ -2,6 +2,7 @@ import type { Context } from '../core/context';
 import { HttpException } from './http-exception';
 import { ExceptionFilterRegistry } from './filter';
 import { ValidationError } from '../validation';
+import { ErrorMessageI18n } from './i18n';
 
 /**
  * 全局错误处理
@@ -15,16 +16,36 @@ export async function handleError(error: unknown, context: Context): Promise<Res
 
   if (error instanceof HttpException) {
     context.setStatus(error.status);
-    return context.createResponse({
-      error: error.message,
-      details: error.details,
-    });
+
+    // 如果异常有错误码，尝试国际化消息
+    let errorMessage = error.message;
+    if (error.code) {
+      const acceptLanguage = context.getHeader('accept-language');
+      const language = ErrorMessageI18n.parseLanguageFromHeader(acceptLanguage);
+      errorMessage = ErrorMessageI18n.getMessage(error.code, language);
+    }
+
+    const responseBody: Record<string, unknown> = {
+      error: errorMessage,
+    };
+
+    // 只有当错误码存在时才添加 code 字段
+    if (error.code) {
+      responseBody.code = error.code;
+    }
+
+    if (error.details !== undefined) {
+      responseBody.details = error.details;
+    }
+
+    return context.createResponse(responseBody);
   }
 
   if (error instanceof ValidationError) {
     context.setStatus(400);
     return context.createResponse({
       error: error.message,
+      code: 'VALIDATION_FAILED',
       issues: error.issues,
     });
   }

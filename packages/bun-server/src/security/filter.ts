@@ -4,7 +4,11 @@ import { SecurityContextHolder } from './context';
 import { AuthenticationManager } from './authentication-manager';
 import { RoleBasedAccessDecisionManager } from './access-decision-manager';
 import type { SecurityConfig, AuthenticationRequest } from './types';
-import { UnauthorizedException, ForbiddenException } from '../error/http-exception';
+import {
+  UnauthorizedException,
+  ForbiddenException,
+} from '../error/http-exception';
+import { ErrorCode } from '../error/error-codes';
 import { requiresAuth, getAuthMetadata } from '../auth/decorators';
 
 /**
@@ -81,7 +85,11 @@ export function createSecurityFilter(config: SecurityFilterConfig): Middleware {
           if (requiresAuth(controllerTarget, method)) {
             const authentication = securityContext.authentication;
             if (!authentication || !authentication.authenticated) {
-              throw new UnauthorizedException('Authentication required');
+              throw new UnauthorizedException(
+                'Authentication required',
+                undefined,
+                ErrorCode.AUTH_REQUIRED,
+              );
             }
 
             // 检查角色权限
@@ -96,12 +104,18 @@ export function createSecurityFilter(config: SecurityFilterConfig): Middleware {
                 const userRoles = authentication.authorities || [];
                 throw new ForbiddenException(
                   `Insufficient permissions. Required roles: ${requiredRoles.join(', ')}, User roles: ${userRoles.join(', ')}`,
+                  { requiredRoles, userRoles },
+                  ErrorCode.AUTH_INSUFFICIENT_PERMISSIONS,
                 );
               }
             }
           }
         } else if (defaultAuthRequired && !securityContext.isAuthenticated()) {
-          throw new UnauthorizedException('Authentication required');
+          throw new UnauthorizedException(
+            'Authentication required',
+            undefined,
+            ErrorCode.AUTH_REQUIRED,
+          );
         }
 
         // 将安全上下文附加到 Context
