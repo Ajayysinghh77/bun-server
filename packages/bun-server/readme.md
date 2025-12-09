@@ -31,7 +31,7 @@
   可扩展**：松耦合的模块系统、扩展系统与日志框架，既可以快速起步，也能按需裁剪。
 - **Monorepo 友好**：原生支持 Bun workspaces，使用 `workspace:*`
   协议管理内部依赖，配合 catalog 统一版本，完美适配多包协作场景。
-- **完整测试矩阵**：内置单元/集成测试、压力与基准测试用例，便于持续优化。
+- **完整测试矩阵**：内置单元/集成测试、压力与基准测试用例，Security 和 Swagger 模块测试覆盖完整，便于持续优化。
 
 ## 核心特性
 
@@ -128,10 +128,10 @@ bun --cwd=benchmark run bench:di     # 仅运行 DI 基准
 
 ## 示例与扩展
 
-- `examples/basic-app.ts`：最小可运行示例，覆盖 DI + Logger + Middleware + Swagger。
-- `examples/full-app.ts`：包含验证、文件上传、WebSocket、复杂控制器。
-- `examples/multi-module-app.ts`：多模块示例，展示模块间的依赖关系和服务共享。
-- `examples/auth-app.ts`：完整的认证演示，包含 JWT + OAuth2 认证流程，前端页面演示。
+- `examples/basic-app.ts`：最小可运行示例，覆盖 DI + Logger + Middleware + Swagger + ConfigModule。
+- `examples/full-app.ts`：包含验证、文件上传、WebSocket、复杂控制器，使用 ConfigModule 管理端口与中间件配置。
+- `examples/multi-module-app.ts`：多模块示例，展示模块间的依赖关系和服务共享，使用 ConfigModule 统一管理应用配置。
+- `examples/auth-app.ts`：完整的认证演示，包含 JWT + OAuth2 认证流程、前端演示页面，并通过 ConfigModule 管理应用标题和端口。
 - `packages/bun-server/src/extensions/`：官方扩展（如
   LoggerExtension、SwaggerExtension），可用于注册第三方能力。
 
