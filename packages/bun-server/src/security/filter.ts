@@ -39,7 +39,8 @@ export function createSecurityFilter(config: SecurityFilterConfig): Middleware {
 
   return async (ctx: Context, next) => {
     // 检查是否在排除列表中
-    const path = ctx.request.url.split('?')[0];
+    // 使用 ctx.path 而不是 ctx.request.url，因为 Context 已经解析了路径
+    const path = ctx.path || ctx.request.url.split('?')[0].replace(/^https?:\/\/[^/]+/, '');
     if (excludePaths.some((exclude) => path.startsWith(exclude))) {
       return await next();
     }
