@@ -5,6 +5,7 @@
 ## 版本号规则
 
 遵循 [Semantic Versioning](https://semver.org/)：
+
 - **MAJOR** (x.0.0): 不兼容的 API 变更
 - **MINOR** (0.x.0): 向后兼容的功能新增
 - **PATCH** (0.0.x): 向后兼容的问题修复
@@ -44,13 +45,16 @@ bun run build
 # Changelog - v0.2.0
 
 ## 🎉 新功能
+
 - ✨ 添加错误码系统
 - ✨ 添加错误消息国际化支持
 
 ## 🐛 修复
+
 - 🔧 修复 Bearer token 提取问题
 
 ## 📊 测试
+
 - ✅ 253 个测试全部通过
 ```
 
@@ -70,6 +74,7 @@ git tag -a v{VERSION} -F CHANGELOG_v{VERSION}.md
 ```
 
 Tag 命名规则：
+
 - 格式：`v{MAJOR}.{MINOR}.{PATCH}`
 - 例如：`v0.2.0`, `v1.0.0`
 
@@ -113,6 +118,7 @@ git push origin --tags
 ---
 
 **完整变更列表：**
+
 - feat(error): add error code system and i18n support
 - feat(security): add concurrent tests for SecurityContext thread safety
 ```
