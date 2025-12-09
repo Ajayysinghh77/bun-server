@@ -78,7 +78,9 @@ export class SecurityModule {
     // 创建认证管理器
     const authenticationManager = new AuthenticationManager();
     authenticationManager.registerProvider(new JwtAuthenticationProvider(jwtUtil));
-    authenticationManager.registerProvider(new OAuth2AuthenticationProvider(oauth2Service));
+    authenticationManager.registerProvider(
+      new OAuth2AuthenticationProvider(oauth2Service, jwtUtil),
+    );
 
     // 创建安全过滤器
     const securityFilter = createSecurityFilter({

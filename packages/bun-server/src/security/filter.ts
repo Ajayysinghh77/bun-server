@@ -131,7 +131,7 @@ function extractTokenFromHeader(ctx: Context): string | null {
   }
 
   const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+  if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
     return null;
   }
 

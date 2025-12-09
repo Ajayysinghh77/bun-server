@@ -74,8 +74,9 @@ export class SecurityContextHolder {
    * @param callback - 要在安全上下文中执行的回调
    */
   public static runWithContext<T>(callback: () => T): T {
-    const existing = this.storage.getStore() ?? new SecurityContextImpl();
-    return this.storage.run(existing, callback);
+    // 总是创建新的上下文，确保每个请求都有独立的上下文
+    const context = new SecurityContextImpl();
+    return this.storage.run(context, callback);
   }
 
   /**

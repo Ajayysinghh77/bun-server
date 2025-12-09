@@ -5,7 +5,8 @@ import type {
   Principal,
 } from '../types';
 import { OAuth2Service } from '../../auth/oauth2';
-import type { OAuth2TokenRequest, UserInfo } from '../../auth/types';
+import { JWTUtil } from '../../auth/jwt';
+import type { OAuth2TokenRequest } from '../../auth/types';
 
 /**
  * OAuth2 认证提供者
@@ -13,7 +14,10 @@ import type { OAuth2TokenRequest, UserInfo } from '../../auth/types';
 export class OAuth2AuthenticationProvider implements AuthenticationProvider {
   public readonly supportedTypes = ['oauth2', 'authorization_code'];
 
-  public constructor(private readonly oauth2Service: OAuth2Service) {}
+  public constructor(
+    private readonly oauth2Service: OAuth2Service,
+    private readonly jwtUtil: JWTUtil,
+  ) {}
 
   /**
    * 是否支持该认证类型
@@ -39,18 +43,16 @@ export class OAuth2AuthenticationProvider implements AuthenticationProvider {
       return null;
     }
 
-    // 从访问令牌中提取用户信息
-    // 注意：这里简化处理，实际应该解析 JWT 或查询用户服务
-    const userInfo: UserInfo = {
-      id: 'user-1', // 应该从令牌或用户服务获取
-      username: 'user',
-      roles: ['user'],
-    };
+    // 从访问令牌中解析用户信息
+    const payload = this.jwtUtil.verify(tokenResponse.accessToken);
+    if (!payload || !payload.sub) {
+      return null;
+    }
 
     const principal: Principal = {
-      id: userInfo.id,
-      username: userInfo.username,
-      roles: userInfo.roles,
+      id: payload.sub,
+      username: (payload.username as string) || payload.sub,
+      roles: (payload.roles as string[]) || [],
     };
 
     return {
