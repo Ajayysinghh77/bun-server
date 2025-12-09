@@ -309,6 +309,75 @@ class UserController {
 - **Security Context**: `SecurityContext` manages current authentication state
 - **Extensible**: Can customize authentication providers and access decision managers
 
+#### ConfigModule (Configuration Management)
+
+ConfigModule provides centralized configuration management, and exposes type-safe access via `ConfigService`:
+
+```typescript
+import {
+  ConfigModule,
+  ConfigService,
+  CONFIG_SERVICE_TOKEN,
+  Module,
+} from '@dangao/bun-server';
+
+// Configure module
+ConfigModule.forRoot({
+  defaultConfig: {
+    app: {
+      port: Number(process.env.PORT ?? 3000),
+      name: 'MyApp',
+    },
+    logger: {
+      prefix: 'MyApp',
+      level: 'debug',
+    },
+  },
+  load(env) {
+    // Load config from environment variables (optional)
+    return {
+      app: {
+        port: env.APP_PORT ? Number(env.APP_PORT) : undefined,
+      },
+    };
+  },
+  validate(config) {
+    if (!config.app?.name) {
+      throw new Error('app.name is required');
+    }
+  },
+});
+
+@Module({
+  imports: [ConfigModule],
+  controllers: [UserController],
+})
+class AppModule {}
+
+// Inject ConfigService in business code
+@Controller('/api')
+class UserController {
+  public constructor(
+    @Inject(CONFIG_SERVICE_TOKEN)
+    private readonly config: ConfigService,
+  ) {}
+
+  @GET('/info')
+  public info() {
+    const appName = this.config.get<string>('app.name', 'MyApp');
+    const port = this.config.get<number>('app.port', 3000);
+    return { appName, port };
+  }
+}
+```
+
+**ConfigModule Highlights**:
+
+- **Centralized configuration**: Supports default config + environment-based loading (`defaultConfig` + `load(env)`)
+- **Type-safe access**: Use `ConfigService.get/getRequired` with dot-path keys (e.g. `app.port`)
+- **Validation hook**: `validate(config)` can integrate class-validator style validation
+- **Non-intrusive**: Examples (`basic-app.ts` / `full-app.ts` / `multi-module-app.ts` / `auth-app.ts`) use `ConfigModule` to manage ports, logger prefixes, etc.
+
 ### Complete Example
 
 ```typescript

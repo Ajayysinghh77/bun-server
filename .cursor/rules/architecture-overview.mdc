@@ -1,0 +1,278 @@
+---
+description: Bun Server Framework 架构概览和模块组织
+alwaysApply: true
+---
+
+# Bun Server Framework 架构概览
+
+本文档帮助 AI agent 快速理解项目架构、模块组织和常见模式。
+
+## 项目结构
+
+```
+packages/bun-server/
+├── src/
+│   ├── core/              # 核心框架（Application, Context, Server）
+│   ├── router/            # 路由系统（Router, Route, RouteRegistry）
+│   ├── controller/        # 控制器系统（Controller, 参数绑定）
+│   ├── di/                # 依赖注入（Container, Module, ModuleRegistry）
+│   ├── middleware/        # 中间件系统（Pipeline, 内置中间件）
+│   ├── validation/        # 验证系统（@Validate, 验证规则）
+│   ├── error/             # 错误处理（HttpException, ExceptionFilter）
+│   ├── websocket/         # WebSocket 支持（Gateway, 装饰器）
+│   ├── files/             # 文件处理（上传、静态文件）
+│   ├── request/           # 请求/响应封装（BodyParser, ResponseBuilder）
+│   ├── extensions/        # 扩展系统（LoggerExtension, LoggerModule）
+│   ├── swagger/           # Swagger/OpenAPI（Generator, Module, UI）
+│   ├── security/         # 安全模块（SecurityModule, AuthenticationManager）
+│   ├── auth/              # 认证实现（JWT, OAuth2, @Auth 装饰器）
+│   ├── config/            # 配置管理（ConfigModule, ConfigService）
+│   ├── health/            # 健康检查（HealthModule, HealthController）
+│   └── testing/           # 测试工具（PerformanceHarness, StressTester）
+├── tests/                 # 测试文件（按模块组织）
+└── examples/              # 示例代码
+```
+
+## 核心架构模式
+
+### 1. 模块系统（Module System）
+
+框架采用模块化架构，所有功能通过 `@Module()` 装饰器组织：
+
+```typescript
+@Module({
+  imports: [ConfigModule, LoggerModule, SwaggerModule], // 导入其他模块
+  controllers: [UserController], // 控制器
+  providers: [UserService], // 服务提供者
+  exports: [UserService], // 导出供其他模块使用
+})
+class AppModule {}
+```
+
+**关键点**：
+
+- `imports`: 导入其他模块，可以使用其导出的服务
+- `providers`: 模块内的服务，支持依赖注入
+- `exports`: 导出的服务，其他模块可以通过 `imports` 使用
+- `controllers`: 模块内的控制器，自动注册路由
+
+### 2. 依赖注入（DI）
+
+框架使用装饰器驱动的依赖注入：
+
+```typescript
+@Injectable()
+class UserService {
+  public find(id: string) {
+    return { id, name: "Alice" };
+  }
+}
+
+@Controller("/api/users")
+class UserController {
+  public constructor(
+    @Inject(UserService) private readonly userService: UserService,
+    @Inject(CONFIG_SERVICE_TOKEN) private readonly config: ConfigService,
+  ) {}
+}
+```
+
+**生命周期**：
+
+- `Singleton`: 单例（默认）
+- `Transient`: 每次创建新实例
+
+### 3. 官方模块
+
+框架提供多个官方模块，通过 `Module.forRoot()` 配置：
+
+#### ConfigModule（配置管理）
+
+```typescript
+ConfigModule.forRoot({
+  defaultConfig: { app: { name: 'MyApp', port: 3000 } },
+  load: (env) => ({ app: { port: Number(env.PORT) } }),
+  validate: (config) => { /* 配置验证 */ },
+});
+
+// 在服务中使用
+@Inject(CONFIG_SERVICE_TOKEN) private readonly config: ConfigService
+const port = config.get<number>('app.port');
+```
+
+#### HealthModule（健康检查）
+
+```typescript
+HealthModule.forRoot({
+  indicators: [
+    { name: "db", check: async () => ({ status: "up" }) },
+  ],
+});
+
+// 自动提供 /health 和 /ready 端点
+```
+
+#### SecurityModule（安全认证）
+
+```typescript
+SecurityModule.forRoot({
+  jwt: { secret: 'key', accessTokenExpiresIn: 3600 },
+  oauth2Clients: [/* ... */],
+  excludePaths: ['/public'],
+});
+
+// 使用 @Auth() 装饰器控制访问
+@Auth({ roles: ['admin'] })
+```
+
+#### LoggerModule（日志）
+
+```typescript
+LoggerModule.forRoot({
+  logger: { prefix: "App", level: LogLevel.DEBUG },
+  enableRequestLogging: true,
+});
+```
+
+#### SwaggerModule（API 文档）
+
+```typescript
+SwaggerModule.forRoot({
+  info: { title: "API", version: "1.0.0" },
+  uiPath: "/swagger",
+});
+```
+
+### 4. 中间件系统
+
+支持全局、控制器级和方法级中间件：
+
+```typescript
+// 全局中间件
+app.use(createLoggerMiddleware({ prefix: '[App]' }));
+
+// 控制器级中间件
+@Controller('/api')
+@UseMiddleware(authMiddleware)
+class ApiController {}
+
+// 方法级中间件
+@GET('/admin')
+@UseMiddleware(adminOnlyMiddleware)
+public admin() {}
+```
+
+### 5. 路由系统
+
+路由通过装饰器定义：
+
+```typescript
+@Controller("/api/users")
+class UserController {
+  @GET("/:id")
+  public getUser(@Param("id") id: string) {}
+
+  @POST("/")
+  public createUser(@Body() user: CreateUserDto) {}
+}
+```
+
+**路径参数**：`:id` 会自动转换为 `{id}`（OpenAPI 格式）
+
+## 常见任务模式
+
+### 添加新模块
+
+1. 创建模块目录：`src/my-module/`
+2. 定义类型：`types.ts`
+3. 实现服务：`service.ts`
+4. 创建模块：`my-module.ts`（使用 `@Module()` 和 `forRoot()`）
+5. 导出：`index.ts`
+6. 添加到 `src/index.ts` 导出
+7. 编写测试：`tests/my-module/`
+
+### 添加新控制器
+
+1. 使用 `@Controller('/path')` 装饰器
+2. 使用 `@GET()`, `@POST()` 等定义路由
+3. 使用 `@Body()`, `@Query()`, `@Param()` 绑定参数
+4. 在模块的 `controllers` 数组中注册
+
+### 添加新服务
+
+1. 使用 `@Injectable()` 装饰器
+2. 在模块的 `providers` 数组中注册
+3. 如需导出，添加到 `exports` 数组
+4. 通过构造函数注入使用
+
+### 添加测试
+
+1. 测试文件放在 `tests/` 目录，按模块组织
+2. 使用 `bun:test` 框架
+3. 测试文件命名：`*.test.ts`
+4. 使用 `describe` 和 `test` 组织测试
+
+## 重要约定
+
+1. **模块命名**：使用 `XxxModule`（如 `ConfigModule`, `HealthModule`）
+2. **服务命名**：使用 `XxxService`（如 `ConfigService`, `HealthController`）
+3. **Token 命名**：使用 `XXX_TOKEN`（如 `CONFIG_SERVICE_TOKEN`,
+   `HEALTH_INDICATORS_TOKEN`）
+4. **文件命名**：使用 kebab-case（如 `config-module.ts`,
+   `health-controller.ts`）
+5. **测试覆盖**：新模块必须包含完整测试
+
+## 模块依赖关系
+
+```
+Application
+  ├── ModuleRegistry
+  │   ├── ConfigModule (基础配置)
+  │   ├── LoggerModule (日志)
+  │   ├── SwaggerModule (API 文档)
+  │   ├── SecurityModule (安全认证)
+  │   │   └── auth/ (JWT, OAuth2 实现)
+  │   ├── HealthModule (健康检查)
+  │   └── UserModule (业务模块示例)
+  └── ControllerRegistry
+      └── 所有模块的控制器
+```
+
+## 测试结构
+
+测试文件按模块组织，与源码结构对应：
+
+```
+tests/
+├── config/
+│   └── config-module.test.ts
+├── health/
+│   └── health-module.test.ts
+├── security/
+│   ├── jwt-provider.test.ts
+│   ├── authentication-manager.test.ts
+│   └── ...
+└── swagger/
+    ├── generator.test.ts
+    └── ...
+```
+
+## 示例代码位置
+
+- `examples/basic-app.ts` - 基础示例（DI + Logger + Swagger + Config）
+- `examples/full-app.ts` - 完整示例（验证、文件上传、WebSocket + Config）
+- `examples/multi-module-app.ts` - 多模块示例（模块依赖 + Config）
+- `examples/auth-app.ts` - 认证示例（JWT + OAuth2 + Security + Config）
+
+## 关键文件
+
+- `src/index.ts` - 主导出文件，所有公共 API
+- `src/core/application.ts` - 应用主类
+- `src/di/module-registry.ts` - 模块注册表
+- `PROJECT_REVIEW.md` - 项目审查和路线图
+
+## MDC 规则维护
+
+**重要**：在进行重大变更（新增模块、修改架构、更新规范等）时，请参考
+`mdc-maintenance.mdc` 规则文件，主动建议用户更新相关的 `.cursor/rules/*.mdc`
+规则文件，确保文档和规则保持同步。

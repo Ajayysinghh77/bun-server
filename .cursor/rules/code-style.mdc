@@ -319,6 +319,8 @@ export default class Application {}
 - 每个模块应该有清晰的职责
 - 相关功能组织在同一目录下
 - 使用 `index.ts` 作为模块入口
+- 官方模块应包含：`types.ts`, `service.ts`（如需要）, `xxx-module.ts`,
+  `index.ts`
 
 ```
 src/
@@ -329,6 +331,16 @@ src/
 ├── router/
 │   ├── router.ts
 │   ├── route.ts
+│   └── index.ts
+├── config/               # 配置管理模块
+│   ├── types.ts          # 类型定义和 Token
+│   ├── service.ts        # ConfigService
+│   ├── config-module.ts  # ConfigModule
+│   └── index.ts
+├── health/               # 健康检查模块
+│   ├── types.ts          # 类型定义和 Token
+│   ├── controller.ts    # HealthController
+│   ├── health-module.ts  # HealthModule
 │   └── index.ts
 ```
 
@@ -593,13 +605,15 @@ import { expect, test } from "vitest";
 - [ ] 所有类型都有明确定义，没有使用 `any`
 - [ ] 所有 `public` 成员都有文档注释
 - [ ] 所有类成员都有明确的访问修饰符
-- [ ] 所有测试都通过
+- [ ] 所有测试都通过（运行 `bun test`）
 - [ ] 代码遵循命名规范
 - [ ] 使用单引号而不是双引号
 - [ ] 所有语句都以分号结尾
 - [ ] 错误处理适当
 - [ ] 没有未使用的导入
 - [ ] 代码格式符合规范
+- [ ] 新模块已添加到 `src/index.ts` 导出
+- [ ] 新模块包含完整的测试文件（`tests/<module>/*.test.ts`）
 
 ## 参考资源
 

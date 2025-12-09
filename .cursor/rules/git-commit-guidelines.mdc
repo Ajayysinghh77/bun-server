@@ -24,6 +24,8 @@ alwaysApply: true
   - `docs` 文档更新
   - `chore` 构建/依赖/脚手架等其他变更
 - `scope`：可选，用 `/` 表示多级目录，如 `di/container`、`docs`、`benchmark`
+  - 常用
+    scope：`config`、`health`、`security`、`swagger`、`auth`、`di`、`router`、`middleware`
 - `summary`：一句话概述，≤ 72 字符，使用动词原形，首字母小写，无句号
 
 ## Body

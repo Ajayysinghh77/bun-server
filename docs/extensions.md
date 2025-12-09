@@ -321,6 +321,75 @@ class UserController {
 - **安全上下文**：`SecurityContext` 管理当前认证状态
 - **可扩展**：可以自定义认证提供者和访问决策器
 
+#### ConfigModule（配置管理）
+
+ConfigModule 提供集中化的配置管理能力，并通过 `ConfigService` 提供类型安全的访问：
+
+```typescript
+import {
+  ConfigModule,
+  ConfigService,
+  CONFIG_SERVICE_TOKEN,
+  Module,
+} from "@dangao/bun-server";
+
+// 配置模块
+ConfigModule.forRoot({
+  defaultConfig: {
+    app: {
+      port: Number(process.env.PORT ?? 3000),
+      name: "MyApp",
+    },
+    logger: {
+      prefix: "MyApp",
+      level: "debug",
+    },
+  },
+  load(env) {
+    // 从环境变量加载配置（可选）
+    return {
+      app: {
+        port: env.APP_PORT ? Number(env.APP_PORT) : undefined,
+      },
+    };
+  },
+  validate(config) {
+    if (!config.app?.name) {
+      throw new Error("app.name is required");
+    }
+  },
+});
+
+@Module({
+  imports: [ConfigModule],
+  controllers: [UserController],
+})
+class AppModule {}
+
+// 在业务代码中注入 ConfigService
+@Controller("/api")
+class UserController {
+  public constructor(
+    @Inject(CONFIG_SERVICE_TOKEN)
+    private readonly config: ConfigService,
+  ) {}
+
+  @GET("/info")
+  public info() {
+    const appName = this.config.get<string>("app.name", "MyApp");
+    const port = this.config.get<number>("app.port", 3000);
+    return { appName, port };
+  }
+}
+```
+
+**ConfigModule 特点**：
+
+- **集中配置来源**：支持默认配置 + 环境变量加载（`defaultConfig` + `load(env)`）
+- **类型安全访问**：通过 `ConfigService.get/getRequired` 使用点号路径（如 `app.port`）
+- **可验证**：`validate(config)` 钩子可集成 class-validator 风格校验
+- **无侵入**：示例中（`basic-app.ts` / `full-app.ts` / `multi-module-app.ts` / `auth-app.ts`）均通过 `ConfigModule` 管理端口、日志前缀等配置
+
 ### 完整示例
 
 ```typescript
