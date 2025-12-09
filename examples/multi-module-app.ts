@@ -2,6 +2,9 @@
 import {
   Application,
   Body,
+  CONFIG_SERVICE_TOKEN,
+  ConfigModule,
+  ConfigService,
   Controller,
   createLoggerMiddleware,
   GET,
@@ -285,19 +288,41 @@ class OrderModule {}
 
 // ==================== Application Setup ====================
 
-const port = Number(process.env.PORT ?? 3300);
-const app = new Application({ port });
+ConfigModule.forRoot({
+  defaultConfig: {
+    app: {
+      port: Number(process.env.PORT ?? 3300),
+    },
+    logger: {
+      prefix: "MultiModuleExample",
+      level: LogLevel.DEBUG,
+    },
+  },
+});
+
+const app = new Application();
+app.registerModule(ConfigModule);
+
+const config = app
+  .getContainer()
+  .resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
+
+const port =
+  config.get<number>("app.port", Number(process.env.PORT ?? 3300)) ?? 3300;
 
 // 注册日志扩展
+const loggerPrefix = config.get<string>("logger.prefix", "MultiModuleExample")!;
+const loggerLevel = config.get<LogLevel>("logger.level", LogLevel.DEBUG)!;
+
 app.registerExtension(
   new LoggerExtension({
-    prefix: "MultiModuleExample",
-    level: LogLevel.DEBUG,
+    prefix: loggerPrefix,
+    level: loggerLevel,
   }),
 );
 
 // 注册中间件
-app.use(createLoggerMiddleware({ prefix: "[MultiModuleExample]" }));
+app.use(createLoggerMiddleware({ prefix: `[${loggerPrefix}]` }));
 
 // 注册模块（只需要注册 OrderModule，因为它已经导入了 UserModule 和 ProductModule）
 // 或者可以分别注册所有模块

@@ -6,6 +6,9 @@ import {
   ApiResponse,
   ApiTags,
   Body,
+  CONFIG_SERVICE_TOKEN,
+  ConfigModule,
+  ConfigService,
   Controller,
   GET,
   Inject,
@@ -47,6 +50,8 @@ class UserController {
   public constructor(
     @Inject(UserService) private readonly service: UserService,
     @Inject(LOGGER_TOKEN) private readonly logger: Logger,
+    @Inject(CONFIG_SERVICE_TOKEN)
+    private readonly config: ConfigService,
   ) {}
 
   @GET("/:id")
@@ -77,7 +82,8 @@ class UserController {
     },
   })
   public getUser(@Param("id") id: string) {
-    this.logger.info("Fetch user", { id });
+    const appName = this.config.get<string>("app.name", "Basic App");
+    this.logger.info(`[${appName}] Fetch user`, { id });
     const user = this.service.find(id);
     if (!user) {
       return { error: "Not Found" };
@@ -114,7 +120,8 @@ class UserController {
     },
   })
   public createUser(@Body("name") @Validate(IsString()) name: string) {
-    this.logger.info("Create user", { name });
+    const appName = this.config.get<string>("app.name", "Basic App");
+    this.logger.info(`[${appName}] Create user`, { name });
     return this.service.create(name);
   }
 }
@@ -127,6 +134,16 @@ class UserController {
 class UserModule {}
 
 const port = Number(process.env.PORT ?? 3100);
+
+// 配置 ConfigModule（应用名称等）
+ConfigModule.forRoot({
+  defaultConfig: {
+    app: {
+      name: "Basic App",
+      port,
+    },
+  },
+});
 
 // 配置 Logger 模块
 LoggerModule.forRoot({
@@ -157,9 +174,9 @@ SwaggerModule.forRoot({
   enableUI: true,
 });
 
-// 应用模块，导入 Logger 和 Swagger 模块
+// 应用模块，导入 Config、Logger 和 Swagger 模块
 @Module({
-  imports: [LoggerModule, SwaggerModule],
+  imports: [ConfigModule, LoggerModule, SwaggerModule],
   controllers: [UserController],
   providers: [UserService],
   exports: [UserService],

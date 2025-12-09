@@ -2,6 +2,9 @@
 import {
   Application,
   Body,
+  CONFIG_SERVICE_TOKEN,
+  ConfigModule,
+  ConfigService,
   Controller,
   createCorsMiddleware,
   createFileUploadMiddleware,
@@ -98,19 +101,57 @@ class ChatGateway {
   }
 }
 
-const port = Number(process.env.PORT ?? 3200);
-const app = new Application({ port });
+// 配置 ConfigModule
+ConfigModule.forRoot({
+  defaultConfig: {
+    app: {
+      port: Number(process.env.PORT ?? 3200),
+    },
+    logger: {
+      prefix: "FullExample",
+      level: LogLevel.INFO,
+    },
+    upload: {
+      maxSize: 5 * 1024 * 1024,
+    },
+    static: {
+      root: "./public",
+      prefix: "/assets",
+    },
+  },
+});
+
+const app = new Application();
+app.registerModule(ConfigModule);
+
+const config = app
+  .getContainer()
+  .resolve<ConfigService>(CONFIG_SERVICE_TOKEN);
+
+const port =
+  config.get<number>("app.port", Number(process.env.PORT ?? 3200)) ?? 3200;
+
 app.getContainer().register(NewsletterService);
+
+const loggerPrefix = config.get<string>("logger.prefix", "FullExample")!;
+const loggerLevel = config.get<LogLevel>("logger.level", LogLevel.INFO)!;
+
 app.registerExtension(
   new LoggerExtension({
-    prefix: "FullExample",
-    level: LogLevel.INFO,
+    prefix: loggerPrefix,
+    level: loggerLevel,
   }),
 );
-app.use(createLoggerMiddleware({ prefix: "[FullExample]" }));
+app.use(createLoggerMiddleware({ prefix: `[${loggerPrefix}]` }));
 app.use(createCorsMiddleware({ origin: "*" }));
-app.use(createFileUploadMiddleware({ maxSize: 5 * 1024 * 1024 }));
-app.use(createStaticFileMiddleware({ root: "./public", prefix: "/assets" }));
+
+const maxUploadSize =
+  config.get<number>("upload.maxSize", 5 * 1024 * 1024) ?? 5 * 1024 * 1024;
+app.use(createFileUploadMiddleware({ maxSize: maxUploadSize }));
+
+const staticRoot = config.get<string>("static.root", "./public")!;
+const staticPrefix = config.get<string>("static.prefix", "/assets")!;
+app.use(createStaticFileMiddleware({ root: staticRoot, prefix: staticPrefix }));
 
 app.registerController(NewsletterController);
 app.registerController(FileController);
