@@ -152,10 +152,11 @@ export class Router {
    * @returns 响应对象，如果没有匹配的路由则返回 undefined
    */
   public async handle(context: Context): Promise<Response | undefined> {
-    const method = context.method as HttpMethod;
-    // 规范化路径：移除尾部斜杠（除非是根路径）
-    const path = this.normalizePath(context.path);
+    // 先预处理路由（设置参数和 routeHandler）
+    await this.preHandle(context);
 
+    const method = context.method as HttpMethod;
+    const path = this.normalizePath(context.path);
     const route = this.findRoute(method, path);
 
     if (!route) {
