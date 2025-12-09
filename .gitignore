@@ -48,3 +48,6 @@ lib/*
 
 .pnpm-store
 vite.*.timestamp-*
+
+# Temporary files
+dummy
