@@ -98,10 +98,15 @@ export class Application {
       await context.getBody();
     }
 
-    // 尝试通过中间件管道处理
+    // 先通过路由解析出处理器信息，便于安全中间件等基于路由元数据做决策
     const registry = RouteRegistry.getInstance();
     const router = registry.getRouter();
 
+    // 预解析路由，仅设置上下文信息，不执行处理器
+    await router.preHandle(context);
+
+    // 再进入中间件管道，由中间件（如安全过滤器）根据 routeHandler 和 Auth 元数据做校验，
+    // 最后再由路由真正执行控制器方法
     return await this.middlewarePipeline.run(context, async () => {
       const response = await router.handle(context);
       if (response) {

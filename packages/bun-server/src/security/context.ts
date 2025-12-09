@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from 'async_hooks';
+
 import type { Authentication, Principal, SecurityContext } from './types';
 
 /**
@@ -53,25 +55,37 @@ export class SecurityContextImpl implements SecurityContext {
  * 安全上下文持有者（ThreadLocal 模式）
  */
 export class SecurityContextHolder {
-  private static readonly contexts = new Map<number, SecurityContextImpl>();
+  private static readonly storage = new AsyncLocalStorage<SecurityContextImpl>();
 
   /**
    * 获取当前上下文
    */
   public static getContext(): SecurityContextImpl {
-    const threadId = Bun.main ? 0 : Date.now();
-    if (!this.contexts.has(threadId)) {
-      this.contexts.set(threadId, new SecurityContextImpl());
+    let context = this.storage.getStore();
+    if (!context) {
+      context = new SecurityContextImpl();
+      this.storage.enterWith(context);
     }
-    return this.contexts.get(threadId)!;
+    return context;
   }
 
   /**
-   * 清除上下文
+   * 在给定回调中运行，绑定独立的安全上下文（每个请求一个）
+   * @param callback - 要在安全上下文中执行的回调
+   */
+  public static runWithContext<T>(callback: () => T): T {
+    const existing = this.storage.getStore() ?? new SecurityContextImpl();
+    return this.storage.run(existing, callback);
+  }
+
+  /**
+   * 清除当前上下文中的认证信息
    */
   public static clearContext(): void {
-    const threadId = Bun.main ? 0 : Date.now();
-    this.contexts.delete(threadId);
+    const context = this.storage.getStore();
+    if (context) {
+      context.clear();
+    }
   }
 }
 

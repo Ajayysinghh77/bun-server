@@ -38,81 +38,86 @@ export function createSecurityFilter(config: SecurityFilterConfig): Middleware {
   } = config;
 
   return async (ctx: Context, next) => {
-    // 检查是否在排除列表中
-    // 使用 ctx.path 而不是 ctx.request.url，因为 Context 已经解析了路径
-    const path = ctx.path || ctx.request.url.split('?')[0].replace(/^https?:\/\/[^/]+/, '');
-    if (excludePaths.some((exclude) => path.startsWith(exclude))) {
-      return await next();
-    }
-
-    // 获取安全上下文
-    const securityContext = SecurityContextHolder.getContext();
-
-    try {
-      // 提取令牌
-      const token = extractToken
-        ? extractToken(ctx)
-        : extractTokenFromHeader(ctx);
-
-      // 如果有令牌，尝试认证
-      if (token) {
-        const request: AuthenticationRequest = {
-          principal: '',
-          credentials: token,
-          type: 'jwt',
-        };
-
-        const authentication = await authenticationManager.authenticate(request);
-        if (authentication) {
-          securityContext.setAuthentication(authentication);
-        }
+    return SecurityContextHolder.runWithContext(async () => {
+      // 检查是否在排除列表中
+      // 使用 ctx.path 而不是 ctx.request.url，因为 Context 已经解析了路径
+      const path =
+        ctx.path || ctx.request.url.split('?')[0].replace(/^https?:\/\/[^/]+/, '');
+      if (excludePaths.some((exclude) => path.startsWith(exclude))) {
+        return await next();
       }
 
-      // 检查是否需要认证
-      const handler = (ctx as any).routeHandler;
-      if (handler) {
-        const controller = handler.controller;
-        const method = handler.method;
+      // 获取安全上下文（绑定到当前 AsyncLocalStorage 上下文）
+      const securityContext = SecurityContextHolder.getContext();
 
-        if (requiresAuth(controller, method)) {
-          const authentication = securityContext.authentication;
-          if (!authentication || !authentication.authenticated) {
-            throw new UnauthorizedException('Authentication required');
+      try {
+        // 提取令牌
+        const token = extractToken
+          ? extractToken(ctx)
+          : extractTokenFromHeader(ctx);
+
+        // 如果有令牌，尝试认证
+        if (token) {
+          const request: AuthenticationRequest = {
+            principal: '',
+            credentials: token,
+            type: 'jwt',
+          };
+
+          const authentication = await authenticationManager.authenticate(request);
+          if (authentication) {
+            securityContext.setAuthentication(authentication);
           }
+        }
 
-          // 检查角色权限
-          const requiredRoles = getRequiredRoles(controller, method);
-          if (requiredRoles.length > 0) {
-            const hasAccess = accessDecisionManager.decide(
-              authentication,
-              requiredRoles,
-            );
-            if (!hasAccess) {
-              // 调试信息：输出权限检查详情
-              const userRoles = authentication.authorities || [];
-              throw new ForbiddenException(
-                `Insufficient permissions. Required roles: ${requiredRoles.join(', ')}, User roles: ${userRoles.join(', ')}`,
+        // 检查是否需要认证
+        const handler = (ctx as any).routeHandler;
+        if (handler) {
+          const controllerClass = handler.controller;
+          const controllerTarget =
+            (controllerClass && controllerClass.prototype) || controllerClass;
+          const method = handler.method;
+
+          if (requiresAuth(controllerTarget, method)) {
+            const authentication = securityContext.authentication;
+            if (!authentication || !authentication.authenticated) {
+              throw new UnauthorizedException('Authentication required');
+            }
+
+            // 检查角色权限
+            const requiredRoles = getRequiredRoles(controllerTarget, method);
+            if (requiredRoles.length > 0) {
+              const hasAccess = accessDecisionManager.decide(
+                authentication,
+                requiredRoles,
               );
+              if (!hasAccess) {
+                // 调试信息：输出权限检查详情
+                const userRoles = authentication.authorities || [];
+                throw new ForbiddenException(
+                  `Insufficient permissions. Required roles: ${requiredRoles.join(', ')}, User roles: ${userRoles.join(', ')}`,
+                );
+              }
             }
           }
+        } else if (defaultAuthRequired && !securityContext.isAuthenticated()) {
+          throw new UnauthorizedException('Authentication required');
         }
-      } else if (defaultAuthRequired && !securityContext.isAuthenticated()) {
-        throw new UnauthorizedException('Authentication required');
+
+        // 将安全上下文附加到 Context
+        (ctx as any).security = securityContext;
+        (ctx as any).auth = {
+          isAuthenticated: securityContext.isAuthenticated(),
+          user: securityContext.getPrincipal(),
+          payload: (securityContext.authentication?.details as any),
+        };
+
+        return await next();
+      } finally {
+        // 清理当前请求内的认证信息，防止泄漏到下一个请求
+        SecurityContextHolder.clearContext();
       }
-
-      // 将安全上下文附加到 Context
-      (ctx as any).security = securityContext;
-      (ctx as any).auth = {
-        isAuthenticated: securityContext.isAuthenticated(),
-        user: securityContext.getPrincipal(),
-        payload: (securityContext.authentication?.details as any),
-      };
-
-      return await next();
-    } finally {
-      // 清理上下文（可选，取决于是否需要保持上下文）
-      // SecurityContextHolder.clearContext();
-    }
+    });
   };
 }
 

@@ -121,7 +121,33 @@ export class Router {
   }
 
   /**
-   * 处理请求
+   * 预处理请求：仅匹配路由并设置路径参数 / routeHandler，但不执行处理器
+   * 供安全过滤器等中间件在真正执行前基于路由元数据做鉴权
+   */
+  public async preHandle(context: Context): Promise<void> {
+    const method = context.method as HttpMethod;
+    const path = this.normalizePath(context.path);
+
+    const route = this.findRoute(method, path);
+    if (!route) {
+      return;
+    }
+
+    const match = route.match(method, path);
+    if (match.matched) {
+      context.params = match.params;
+    }
+
+    if (route.controllerClass && route.methodName) {
+      (context as any).routeHandler = {
+        controller: route.controllerClass,
+        method: route.methodName,
+      };
+    }
+  }
+
+  /**
+   * 处理请求（包含路由匹配 + 执行）
    * @param context - 请求上下文
    * @returns 响应对象，如果没有匹配的路由则返回 undefined
    */
@@ -129,25 +155,11 @@ export class Router {
     const method = context.method as HttpMethod;
     // 规范化路径：移除尾部斜杠（除非是根路径）
     const path = this.normalizePath(context.path);
-    
+
     const route = this.findRoute(method, path);
 
     if (!route) {
       return undefined;
-    }
-
-    // 提取路径参数并设置到 context
-    const match = route.match(method, path);
-    if (match.matched) {
-      context.params = match.params;
-    }
-
-    // 将路由信息附加到 context，供中间件使用
-    if (route.controllerClass && route.methodName) {
-      (context as any).routeHandler = {
-        controller: route.controllerClass,
-        method: route.methodName,
-      };
     }
 
     return await route.execute(context);

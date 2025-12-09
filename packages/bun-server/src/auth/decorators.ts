@@ -57,7 +57,11 @@ export function getAuthMetadata(
  */
 export function requiresAuth(target: Object, propertyKey: string | symbol): boolean {
   const config = getAuthMetadata(target, propertyKey);
-  return config?.required !== false;
+  // 如果没有配置，默认不需要认证；只有显式标注 @Auth 时才进入认证流程
+  if (!config) {
+    return false;
+  }
+  return config.required !== false;
 }
 
 /**
