@@ -118,14 +118,20 @@
 
 ## ⚠️ 功能缺陷与改进点
 
-### 1. OAuth2 端到端测试
+### 1. OAuth2 端到端测试 ✅ 已解决
 
 **问题**：
 
-- OAuth2 完整流程缺少端到端测试
-- 授权码交换令牌流程需要集成测试
+- ~~OAuth2 完整流程缺少端到端测试~~
+- ~~授权码交换令牌流程需要集成测试~~
 
-**影响**：OAuth2 流程可能存在边界情况未覆盖
+**解决方案**：
+
+- ✅ 添加了完整的 OAuth2 端到端测试（11 个测试用例）
+- ✅ 覆盖授权码流程、刷新令牌、错误处理等场景
+- ✅ 添加了 OAuth2AuthenticationProvider 单元测试（10 个测试用例）
+
+**影响**：已解决，OAuth2 流程测试覆盖完整
 
 **优先级**：🟡 中
 
@@ -320,17 +326,17 @@
   - [x] SwaggerExtension 测试
   - [x] SwaggerModule 测试
   - [x] Swagger 装饰器测试
-- [ ] OAuth2 端到端测试（待补充）
+- [x] OAuth2 端到端测试 ✅
 - [ ] 提高整体测试覆盖率至 85%+（进行中）
 
 **优先级**：🔴 高
 
-#### 1.2 SecurityContext 线程安全改进
+#### 1.2 SecurityContext 线程安全改进 ✅ 已完成
 
-- [ ] 重构 SecurityContextHolder
-  - [ ] 使用 AsyncLocalStorage（如果 Bun 支持）或 Context API
-  - [ ] 确保异步并发安全
-- [ ] 添加并发测试用例
+- [x] 重构 SecurityContextHolder
+  - [x] 使用 AsyncLocalStorage（Bun 支持）
+  - [x] 确保异步并发安全（每个请求独立上下文）
+- [x] 添加并发测试用例（5 个并发测试用例）
 
 **优先级**：🟡 中
 
