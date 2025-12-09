@@ -8,30 +8,33 @@ describe('AuthenticationManager', () => {
   let jwtUtil: JWTUtil;
   let jwtProvider: JwtAuthenticationProvider;
 
-  beforeEach(() => {
+  beforeEach((done) => {
     manager = new AuthenticationManager();
     jwtUtil = new JWTUtil({
       secret: 'test-secret-key',
       accessTokenExpiresIn: 3600,
     });
     jwtProvider = new JwtAuthenticationProvider(jwtUtil);
+    done();
   });
 
-  test('should register provider', () => {
+  test('should register provider', (done) => {
     manager.registerProvider(jwtProvider);
     const providers = manager.getProviders();
     expect(providers.length).toBe(1);
     expect(providers[0]).toBe(jwtProvider);
+    done();
   });
 
-  test('should register multiple providers', () => {
+  test('should register multiple providers', (done) => {
     const provider2 = new JwtAuthenticationProvider(jwtUtil);
     manager.registerProvider(jwtProvider);
     manager.registerProvider(provider2);
     expect(manager.getProviders().length).toBe(2);
+    done();
   });
 
-  test('should authenticate with registered provider', async () => {
+  test('should authenticate with registered provider', async (done) => {
     manager.registerProvider(jwtProvider);
     const token = jwtUtil.generateAccessToken({
       sub: 'user-1',
@@ -47,9 +50,10 @@ describe('AuthenticationManager', () => {
 
     expect(authentication).not.toBeNull();
     expect(authentication?.authenticated).toBe(true);
+    done();
   });
 
-  test('should throw error for unsupported type', async () => {
+  test('should throw error for unsupported type', async (done) => {
     manager.registerProvider(jwtProvider);
 
     await expect(
@@ -59,9 +63,10 @@ describe('AuthenticationManager', () => {
         type: 'unsupported',
       }),
     ).rejects.toThrow('No authentication provider found for type: unsupported');
+    done();
   });
 
-  test('should use default type when not specified', async () => {
+  test('should use default type when not specified', async (done) => {
     manager.registerProvider(jwtProvider);
 
     await expect(
@@ -70,6 +75,7 @@ describe('AuthenticationManager', () => {
         credentials: 'token',
       }),
     ).rejects.toThrow('No authentication provider found for type: default');
+    done();
   });
 });
 
