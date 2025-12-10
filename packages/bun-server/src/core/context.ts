@@ -151,6 +151,30 @@ export class Context {
   }
 
   /**
+   * 获取客户端 IP 地址
+   * 优先从 X-Forwarded-For 头获取（代理场景），否则从连接信息获取
+   * @returns 客户端 IP 地址
+   */
+  public getClientIp(): string {
+    // 优先从 X-Forwarded-For 头获取（处理代理场景）
+    const forwardedFor = this.getHeader('X-Forwarded-For');
+    if (forwardedFor) {
+      // X-Forwarded-For 可能包含多个 IP，取第一个
+      return forwardedFor.split(',')[0].trim();
+    }
+
+    // 尝试从 X-Real-IP 头获取
+    const realIp = this.getHeader('X-Real-IP');
+    if (realIp) {
+      return realIp.trim();
+    }
+
+    // 如果是在 Bun.serve 中，可以从 request 获取
+    // 但标准 Request 对象没有直接 IP 信息，返回默认值
+    return 'unknown';
+  }
+
+  /**
    * 设置响应头
    * @param key - 头名称
    * @param value - 头值

@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import type { Middleware } from './middleware';
+import { createRateLimitMiddleware, type RateLimitOptions } from './builtin/rate-limit';
 
 const CLASS_MIDDLEWARE_METADATA_KEY = Symbol('middleware:class');
 const METHOD_MIDDLEWARE_METADATA_KEY = Symbol('middleware:method');
@@ -51,6 +52,18 @@ export function UseMiddleware(...middlewares: Middleware[]): ClassDecorator & Me
 }
 
 /**
+ * RateLimit 装饰器
+ * 用于在控制器方法上应用速率限制
+ * @param options - 速率限制选项
+ */
+export function RateLimit(options: RateLimitOptions): MethodDecorator {
+  return function (target: object, propertyKey: string | symbol) {
+    const middleware = createRateLimitMiddleware(options);
+    appendMiddlewareMetadata(target, propertyKey, [middleware]);
+  };
+}
+
+/**
  * 获取类级中间件
  * @param constructor - 控制器构造函数
  * @returns 中间件列表
@@ -76,5 +89,3 @@ export function getMethodMiddlewares(
     []
   );
 }
-
-

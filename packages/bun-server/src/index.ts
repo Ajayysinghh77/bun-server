@@ -17,7 +17,7 @@ export {
   type ModuleClass,
 } from './di/module';
 export { ModuleRegistry } from './di/module-registry';
-export { UseMiddleware, MiddlewarePipeline } from './middleware';
+export { UseMiddleware, RateLimit, MiddlewarePipeline } from './middleware';
 export type { Middleware, NextFunction } from './middleware';
 export {
   createLoggerMiddleware,
@@ -26,6 +26,11 @@ export {
   createCorsMiddleware,
   createFileUploadMiddleware,
   createStaticFileMiddleware,
+  createRateLimitMiddleware,
+  createTokenKeyGenerator,
+  createUserKeyGenerator,
+  type RateLimitOptions,
+  type RateLimitStore,
 } from './middleware/builtin';
 export {
   Validate,
@@ -117,6 +122,20 @@ export {
   HEALTH_INDICATORS_TOKEN,
   HEALTH_OPTIONS_TOKEN,
 } from './health';
+export {
+  MetricsModule,
+  MetricsCollector,
+  PrometheusFormatter,
+  createHttpMetricsMiddleware,
+  METRICS_SERVICE_TOKEN,
+  METRICS_OPTIONS_TOKEN,
+  type MetricsModuleOptions,
+  type MetricType,
+  type MetricLabels,
+  type MetricValue,
+  type MetricDataPoint,
+  type CustomMetric,
+} from './metrics';
 // Auth 模块（底层实现，供 Security 模块使用）
 export {
   JWTUtil,
