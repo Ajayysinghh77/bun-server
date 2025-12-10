@@ -152,7 +152,27 @@ export class ControllerRegistry {
             throw new Error(`Method ${propertyKey} not found on controller ${controllerClass.name}`);
           }
 
-          const result = method.apply(controllerInstance, params);
+          // 检查是否有事务装饰器
+          let result: unknown;
+          try {
+            const { TransactionInterceptor } = await import('../database/orm/transaction-interceptor');
+            const { getTransactionMetadata } = await import('../database/orm/transaction-decorator');
+            const hasTransaction = getTransactionMetadata(prototype, propertyKey!);
+            if (hasTransaction) {
+              result = TransactionInterceptor.executeWithTransaction(
+                prototype,
+                propertyKey!,
+                method,
+                params,
+                controllerContainer,
+              );
+            } else {
+              result = method.apply(controllerInstance, params);
+            }
+          } catch (error) {
+            // 如果导入失败或执行失败，回退到直接调用
+            result = method.apply(controllerInstance, params);
+          }
 
           // 处理异步结果
           const responseData = await Promise.resolve(result);

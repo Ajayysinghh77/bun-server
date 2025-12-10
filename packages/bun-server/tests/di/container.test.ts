@@ -13,6 +13,9 @@ describe('Container', () => {
 
   beforeEach(() => {
     container = new Container();
+    // 清理全局注册表，避免测试间污染
+    RouteRegistry.getInstance().clear();
+    ControllerRegistry.getInstance().clear();
   });
 
   test('should create container instance', () => {

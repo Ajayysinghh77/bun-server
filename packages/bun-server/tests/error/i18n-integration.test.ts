@@ -46,9 +46,9 @@ describe('Error I18n Integration', () => {
     port = getTestPort();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     if (app) {
-      app.stop();
+      await app.stop();
     }
     RouteRegistry.getInstance().clear();
     ControllerRegistry.getInstance().clear();
@@ -67,7 +67,7 @@ describe('Error I18n Integration', () => {
     });
     app.registerModule(SecurityModule);
     app.registerController(TestController);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/test/not-found`);
     const data = await response.json();
@@ -92,7 +92,7 @@ describe('Error I18n Integration', () => {
     });
     app.registerModule(SecurityModule);
     app.registerController(TestController);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/test/not-found`);
     const data = await response.json();
@@ -112,7 +112,7 @@ describe('Error I18n Integration', () => {
     });
     app.registerModule(SecurityModule);
     app.registerController(TestController);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/test/not-found`, {
       headers: {
@@ -137,7 +137,7 @@ describe('Error I18n Integration', () => {
     });
     app.registerModule(SecurityModule);
     app.registerController(TestController);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/test/unauthorized`);
     const data = await response.json();
@@ -158,7 +158,7 @@ describe('Error I18n Integration', () => {
     });
     app.registerModule(SecurityModule);
     app.registerController(TestController);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/test/unauthorized`, {
       headers: {

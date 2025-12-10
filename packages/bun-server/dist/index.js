@@ -1,5 +1,20 @@
 // @bun
+var __create = Object.create;
+var __getProtoOf = Object.getPrototypeOf;
 var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __toESM = (mod, isNodeMode, target) => {
+  target = mod != null ? __create(__getProtoOf(mod)) : {};
+  const to = isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target;
+  for (let key of __getOwnPropNames(mod))
+    if (!__hasOwnProp.call(to, key))
+      __defProp(to, key, {
+        get: () => mod[key],
+        enumerable: true
+      });
+  return to;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, {
@@ -25,6 +40,7 @@ var __legacyMetadataTS = (k, v) => {
     return Reflect.metadata(k, v);
 };
 var __esm = (fn, res) => () => (fn && (res = fn(fn = 0)), res);
+var __require = import.meta.require;
 
 // src/validation/decorators.ts
 import"reflect-metadata";
@@ -388,6 +404,181 @@ var init_handler = __esm(() => {
   init_http_exception();
   init_validation();
   init_i18n();
+});
+
+// src/database/orm/transaction-types.ts
+var Propagation, IsolationLevel, TransactionStatus, TRANSACTION_SERVICE_TOKEN;
+var init_transaction_types = __esm(() => {
+  ((Propagation2) => {
+    Propagation2["REQUIRED"] = "REQUIRED";
+    Propagation2["REQUIRES_NEW"] = "REQUIRES_NEW";
+    Propagation2["SUPPORTS"] = "SUPPORTS";
+    Propagation2["NOT_SUPPORTED"] = "NOT_SUPPORTED";
+    Propagation2["NEVER"] = "NEVER";
+    Propagation2["NESTED"] = "NESTED";
+  })(Propagation ||= {});
+  ((IsolationLevel2) => {
+    IsolationLevel2["READ_UNCOMMITTED"] = "READ_UNCOMMITTED";
+    IsolationLevel2["READ_COMMITTED"] = "READ_COMMITTED";
+    IsolationLevel2["REPEATABLE_READ"] = "REPEATABLE_READ";
+    IsolationLevel2["SERIALIZABLE"] = "SERIALIZABLE";
+  })(IsolationLevel ||= {});
+  ((TransactionStatus2) => {
+    TransactionStatus2["ACTIVE"] = "ACTIVE";
+    TransactionStatus2["COMMITTED"] = "COMMITTED";
+    TransactionStatus2["ROLLED_BACK"] = "ROLLED_BACK";
+    TransactionStatus2["SUSPENDED"] = "SUSPENDED";
+  })(TransactionStatus ||= {});
+  TRANSACTION_SERVICE_TOKEN = Symbol("@dangao/bun-server:orm:transaction:service");
+});
+
+// src/database/orm/transaction-decorator.ts
+var exports_transaction_decorator = {};
+__export(exports_transaction_decorator, {
+  getTransactionMetadata: () => getTransactionMetadata,
+  Transactional: () => Transactional,
+  TRANSACTION_METADATA_KEY: () => TRANSACTION_METADATA_KEY
+});
+import"reflect-metadata";
+function Transactional(options) {
+  return (target, propertyKey, descriptor) => {
+    if (!descriptor || typeof descriptor.value !== "function") {
+      throw new Error("@Transactional() can only be applied to methods");
+    }
+    const metadata = {
+      propagation: options?.propagation ?? "REQUIRED" /* REQUIRED */,
+      isolationLevel: options?.isolationLevel,
+      timeout: options?.timeout,
+      readOnly: options?.readOnly ?? false,
+      rollbackFor: options?.rollbackFor ?? [],
+      noRollbackFor: options?.noRollbackFor ?? []
+    };
+    Reflect.defineMetadata(TRANSACTION_METADATA_KEY, metadata, target, propertyKey);
+  };
+}
+function getTransactionMetadata(target, propertyKey) {
+  if (typeof target === "object" && target !== null) {
+    return Reflect.getMetadata(TRANSACTION_METADATA_KEY, target, propertyKey);
+  }
+  return;
+}
+var TRANSACTION_METADATA_KEY;
+var init_transaction_decorator = __esm(() => {
+  init_transaction_types();
+  TRANSACTION_METADATA_KEY = Symbol("@dangao/bun-server:orm:transaction");
+});
+
+// src/database/orm/transaction-interceptor.ts
+var exports_transaction_interceptor = {};
+__export(exports_transaction_interceptor, {
+  TransactionInterceptor: () => TransactionInterceptor
+});
+
+class TransactionInterceptor {
+  static async executeWithTransaction(target, propertyKey, originalMethod, args, container) {
+    const transactionMetadata = getTransactionMetadata(target, propertyKey);
+    if (!transactionMetadata) {
+      return await Promise.resolve(originalMethod.apply(target, args));
+    }
+    let transactionManager;
+    try {
+      transactionManager = container.resolve(TRANSACTION_SERVICE_TOKEN);
+    } catch (error) {
+      console.warn("TransactionManager not found, executing without transaction");
+      return await Promise.resolve(originalMethod.apply(target, args));
+    }
+    const propagation = transactionMetadata.propagation ?? "REQUIRED" /* REQUIRED */;
+    const currentTransaction = transactionManager.getCurrentTransaction();
+    switch (propagation) {
+      case "REQUIRED" /* REQUIRED */:
+        if (currentTransaction) {
+          return await this.executeInExistingTransaction(originalMethod, target, args, currentTransaction.id, transactionManager);
+        } else {
+          return await this.executeInNewTransaction(originalMethod, target, args, transactionMetadata, transactionManager);
+        }
+      case "REQUIRES_NEW" /* REQUIRES_NEW */:
+        return await this.executeInNewTransaction(originalMethod, target, args, transactionMetadata, transactionManager);
+      case "SUPPORTS" /* SUPPORTS */:
+        if (currentTransaction) {
+          return await this.executeInExistingTransaction(originalMethod, target, args, currentTransaction.id, transactionManager);
+        } else {
+          return await Promise.resolve(originalMethod.apply(target, args));
+        }
+      case "NOT_SUPPORTED" /* NOT_SUPPORTED */:
+        return await Promise.resolve(originalMethod.apply(target, args));
+      case "NEVER" /* NEVER */:
+        if (currentTransaction) {
+          throw new Error("Transaction propagation NEVER requires no existing transaction");
+        }
+        return await Promise.resolve(originalMethod.apply(target, args));
+      case "NESTED" /* NESTED */:
+        if (currentTransaction) {
+          return await this.executeInNestedTransaction(originalMethod, target, args, currentTransaction.id, transactionMetadata, transactionManager);
+        } else {
+          return await this.executeInNewTransaction(originalMethod, target, args, transactionMetadata, transactionManager);
+        }
+      default:
+        return await Promise.resolve(originalMethod.apply(target, args));
+    }
+  }
+  static async executeInNewTransaction(method, target, args, options, transactionManager) {
+    const context = await transactionManager.beginTransaction({
+      timeout: options.timeout
+    });
+    try {
+      const result = await Promise.resolve(method.apply(target, args));
+      await transactionManager.commitTransaction(context.id);
+      return result;
+    } catch (error) {
+      if (this.shouldRollback(error, options.rollbackFor, options.noRollbackFor)) {
+        await transactionManager.rollbackTransaction(context.id);
+      } else {
+        await transactionManager.commitTransaction(context.id);
+      }
+      throw error;
+    }
+  }
+  static async executeInExistingTransaction(method, target, args, transactionId, transactionManager) {
+    return await Promise.resolve(method.apply(target, args));
+  }
+  static async executeInNestedTransaction(method, target, args, parentTransactionId, options, transactionManager) {
+    const savepointName = await transactionManager.createSavepoint(parentTransactionId);
+    try {
+      const result = await Promise.resolve(method.apply(target, args));
+      return result;
+    } catch (error) {
+      if (this.shouldRollback(error, options.rollbackFor, options.noRollbackFor)) {
+        await transactionManager.rollbackToSavepoint(parentTransactionId, savepointName);
+      }
+      throw error;
+    }
+  }
+  static shouldRollback(error, rollbackFor, noRollbackFor) {
+    if (!error) {
+      return false;
+    }
+    if (noRollbackFor && noRollbackFor.length > 0) {
+      for (const ErrorClass of noRollbackFor) {
+        if (error instanceof ErrorClass) {
+          return false;
+        }
+      }
+    }
+    if (rollbackFor && rollbackFor.length > 0) {
+      for (const ErrorClass of rollbackFor) {
+        if (error instanceof ErrorClass) {
+          return true;
+        }
+      }
+      return false;
+    }
+    return true;
+  }
+}
+var init_transaction_interceptor = __esm(() => {
+  init_transaction_types();
+  init_transaction_decorator();
+  init_transaction_types();
 });
 
 // src/request/body-parser.ts
@@ -1813,7 +2004,19 @@ class ControllerRegistry {
           if (!method || typeof method !== "function") {
             throw new Error(`Method ${propertyKey} not found on controller ${controllerClass.name}`);
           }
-          const result = method.apply(controllerInstance, params);
+          let result;
+          try {
+            const { TransactionInterceptor: TransactionInterceptor2 } = await Promise.resolve().then(() => (init_transaction_interceptor(), exports_transaction_interceptor));
+            const { getTransactionMetadata: getTransactionMetadata2 } = await Promise.resolve().then(() => (init_transaction_decorator(), exports_transaction_decorator));
+            const hasTransaction = getTransactionMetadata2(prototype2, propertyKey);
+            if (hasTransaction) {
+              result = TransactionInterceptor2.executeWithTransaction(prototype2, propertyKey, method, params, controllerContainer);
+            } else {
+              result = method.apply(controllerInstance, params);
+            }
+          } catch (error) {
+            result = method.apply(controllerInstance, params);
+          }
           const responseData = await Promise.resolve(result);
           if (responseData instanceof Response) {
             return responseData;
@@ -2174,10 +2377,11 @@ class Application {
   use(middleware) {
     this.middlewarePipeline.use(middleware);
   }
-  listen(port, hostname) {
+  async listen(port, hostname) {
     if (this.server?.isRunning()) {
       throw new Error("Application is already running");
     }
+    await this.initializeExtensions();
     const serverOptions = {
       port: port ?? this.options.port ?? 3000,
       hostname: hostname ?? this.options.hostname,
@@ -2187,8 +2391,26 @@ class Application {
     this.server = new BunServer(serverOptions);
     this.server.start();
   }
-  stop() {
+  async initializeExtensions() {
+    const container = this.getContainer();
+    for (const extension of this.extensions) {
+      if (extension && typeof extension === "object" && "initialize" in extension && typeof extension.initialize === "function") {
+        await extension.initialize(container);
+      }
+    }
+  }
+  async stop() {
+    await this.closeExtensions();
     this.server?.stop();
+  }
+  async closeExtensions() {
+    const container = this.getContainer();
+    for (let i = this.extensions.length - 1;i >= 0; i--) {
+      const extension = this.extensions[i];
+      if (extension && typeof extension === "object" && "close" in extension && typeof extension.close === "function") {
+        await extension.close(container);
+      }
+    }
   }
   async handleRequest(context) {
     if (["POST", "PUT", "PATCH"].includes(context.method)) {
@@ -3245,19 +3467,19 @@ class OAuth2Controller {
   constructor(oauth2Service) {
     this.oauth2Service = oauth2Service;
   }
-  authorize(clientId, redirectUri, state, scope) {
-    const query = {
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      ...state && { state },
-      ...scope && { scope }
-    };
+  authorize(clientId, redirectUri, responseType, state, scope) {
+    if (!clientId || !redirectUri) {
+      throw new Error("Missing required parameters: client_id and redirect_uri are required");
+    }
+    if (responseType !== "code") {
+      throw new Error(`Unsupported response_type: ${responseType}. Only 'code' is supported.`);
+    }
     const request = {
-      clientId: query.client_id || "",
-      redirectUri: query.redirect_uri || "",
+      clientId,
+      redirectUri,
       responseType: "code",
-      scope: query.scope,
-      state: query.state
+      scope: scope || undefined,
+      state: state || undefined
     };
     const validation = this.oauth2Service.validateAuthorizationRequest(request);
     if (!validation.valid) {
@@ -3318,10 +3540,12 @@ __legacyDecorateClassTS([
   GET("/authorize"),
   __legacyDecorateParamTS(0, Query("client_id")),
   __legacyDecorateParamTS(1, Query("redirect_uri")),
-  __legacyDecorateParamTS(2, Query("state")),
-  __legacyDecorateParamTS(3, Query("scope")),
+  __legacyDecorateParamTS(2, Query("response_type")),
+  __legacyDecorateParamTS(3, Query("state")),
+  __legacyDecorateParamTS(4, Query("scope")),
   __legacyMetadataTS("design:type", Function),
   __legacyMetadataTS("design:paramtypes", [
+    String,
     String,
     String,
     String,
@@ -3903,6 +4127,875 @@ function createHttpMetricsMiddleware(collector) {
     return response;
   };
 }
+// src/database/types.ts
+var DATABASE_SERVICE_TOKEN = Symbol("@dangao/bun-server:database:service");
+var DATABASE_OPTIONS_TOKEN = Symbol("@dangao/bun-server:database:options");
+
+// src/database/database-extension.ts
+class DatabaseExtension {
+  register(container) {}
+  async initialize(container) {
+    try {
+      const databaseService = container.resolve(DATABASE_SERVICE_TOKEN);
+      await databaseService.initialize();
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Provider not found")) {
+        return;
+      }
+      throw error;
+    }
+  }
+  async close(container) {
+    try {
+      const databaseService = container.resolve(DATABASE_SERVICE_TOKEN);
+      await databaseService.closePool();
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("Provider not found")) {
+        return;
+      }
+      throw error;
+    }
+  }
+}
+
+// src/database/health-indicator.ts
+class DatabaseHealthIndicator {
+  databaseService;
+  name = "database";
+  constructor(databaseService) {
+    this.databaseService = databaseService;
+  }
+  async check() {
+    try {
+      const isHealthy = await this.databaseService.healthCheck();
+      const connectionInfo = this.databaseService.getConnectionInfo();
+      if (isHealthy) {
+        return {
+          status: "up",
+          details: {
+            type: connectionInfo.type,
+            status: connectionInfo.status
+          }
+        };
+      }
+      return {
+        status: "down",
+        details: {
+          type: connectionInfo.type,
+          status: connectionInfo.status,
+          error: connectionInfo.error
+        }
+      };
+    } catch (error) {
+      return {
+        status: "down",
+        details: {
+          error: error instanceof Error ? error.message : String(error)
+        }
+      };
+    }
+  }
+}
+
+// src/database/orm/service.ts
+class OrmService {
+  databaseService;
+  options;
+  drizzleInstance = null;
+  constructor(databaseService, options = {}) {
+    this.databaseService = databaseService;
+    this.options = options;
+  }
+  getDrizzle() {
+    if (this.options.drizzle) {
+      return this.options.drizzle;
+    }
+    if (this.drizzleInstance) {
+      return this.drizzleInstance;
+    }
+    return null;
+  }
+  setDrizzle(drizzle) {
+    this.drizzleInstance = drizzle;
+  }
+  getDatabaseService() {
+    return this.databaseService;
+  }
+}
+OrmService = __legacyDecorateClassTS([
+  Injectable(),
+  __legacyMetadataTS("design:paramtypes", [
+    typeof DatabaseService === "undefined" ? Object : DatabaseService,
+    typeof OrmModuleOptions === "undefined" ? Object : OrmModuleOptions
+  ])
+], OrmService);
+
+// src/database/orm/transaction-manager.ts
+init_transaction_types();
+class TransactionManager {
+  databaseService;
+  transactions = new Map;
+  connectionTransactions = new Map;
+  constructor(databaseService) {
+    this.databaseService = databaseService;
+  }
+  async beginTransaction(options = {}) {
+    const transactionId = this.generateTransactionId();
+    const context2 = {
+      id: transactionId,
+      status: "ACTIVE" /* ACTIVE */,
+      startTime: Date.now(),
+      level: 0,
+      savepoints: []
+    };
+    const connection = await this.databaseService.getConnection();
+    this.connectionTransactions.set(connection, transactionId);
+    this.transactions.set(transactionId, context2);
+    await this.executeBegin(connection, options);
+    return context2;
+  }
+  async commitTransaction(transactionId) {
+    const context2 = this.transactions.get(transactionId);
+    if (!context2) {
+      throw new Error(`Transaction ${transactionId} not found`);
+    }
+    if (context2.status !== "ACTIVE" /* ACTIVE */) {
+      throw new Error(`Transaction ${transactionId} is not active`);
+    }
+    const connection = this.findConnectionByTransactionId(transactionId);
+    if (!connection) {
+      throw new Error(`Connection not found for transaction ${transactionId}`);
+    }
+    await this.executeCommit(connection);
+    context2.status = "COMMITTED" /* COMMITTED */;
+    this.cleanupTransaction(transactionId);
+  }
+  async rollbackTransaction(transactionId) {
+    const context2 = this.transactions.get(transactionId);
+    if (!context2) {
+      throw new Error(`Transaction ${transactionId} not found`);
+    }
+    const connection = this.findConnectionByTransactionId(transactionId);
+    if (!connection) {
+      throw new Error(`Connection not found for transaction ${transactionId}`);
+    }
+    await this.executeRollback(connection);
+    context2.status = "ROLLED_BACK" /* ROLLED_BACK */;
+    this.cleanupTransaction(transactionId);
+  }
+  async createSavepoint(transactionId) {
+    const context2 = this.transactions.get(transactionId);
+    if (!context2) {
+      throw new Error(`Transaction ${transactionId} not found`);
+    }
+    const savepointName = `sp_${context2.level}_${Date.now()}`;
+    context2.savepoints = context2.savepoints || [];
+    context2.savepoints.push(savepointName);
+    context2.level += 1;
+    const connection = this.findConnectionByTransactionId(transactionId);
+    if (connection) {
+      await this.executeSavepoint(connection, savepointName);
+    }
+    return savepointName;
+  }
+  async rollbackToSavepoint(transactionId, savepointName) {
+    const context2 = this.transactions.get(transactionId);
+    if (!context2) {
+      throw new Error(`Transaction ${transactionId} not found`);
+    }
+    const connection = this.findConnectionByTransactionId(transactionId);
+    if (connection) {
+      await this.executeRollbackToSavepoint(connection, savepointName);
+    }
+    const index = context2.savepoints?.indexOf(savepointName) ?? -1;
+    if (index >= 0 && context2.savepoints) {
+      context2.savepoints = context2.savepoints.slice(0, index);
+      context2.level = index;
+    }
+  }
+  getCurrentTransaction() {
+    for (const context2 of this.transactions.values()) {
+      if (context2.status === "ACTIVE" /* ACTIVE */) {
+        return context2;
+      }
+    }
+    return null;
+  }
+  hasActiveTransaction() {
+    return this.getCurrentTransaction() !== null;
+  }
+  generateTransactionId() {
+    return `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  }
+  findConnectionByTransactionId(transactionId) {
+    for (const [connection, txId] of this.connectionTransactions.entries()) {
+      if (txId === transactionId) {
+        return connection;
+      }
+    }
+    return null;
+  }
+  cleanupTransaction(transactionId) {
+    this.transactions.delete(transactionId);
+    for (const [connection, txId] of this.connectionTransactions.entries()) {
+      if (txId === transactionId) {
+        this.connectionTransactions.delete(connection);
+        break;
+      }
+    }
+  }
+  async executeBegin(connection, options) {
+    const dbType = this.databaseService["config"].database.type;
+    if (dbType === "sqlite") {
+      await this.databaseService.query("BEGIN TRANSACTION");
+    } else if (dbType === "postgres" || dbType === "mysql") {
+      let sql = "START TRANSACTION";
+      if (options.isolationLevel) {
+        const isolation = this.getIsolationLevelSQL(options.isolationLevel);
+        sql += ` ${isolation}`;
+      }
+      if (options.readOnly) {
+        sql += " READ ONLY";
+      }
+      await this.databaseService.query(sql);
+    }
+  }
+  async executeCommit(connection) {
+    await this.databaseService.query("COMMIT");
+  }
+  async executeRollback(connection) {
+    await this.databaseService.query("ROLLBACK");
+  }
+  async executeSavepoint(connection, savepointName) {
+    await this.databaseService.query(`SAVEPOINT ${savepointName}`);
+  }
+  async executeRollbackToSavepoint(connection, savepointName) {
+    await this.databaseService.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
+  }
+  getIsolationLevelSQL(level) {
+    const dbType = this.databaseService["config"].database.type;
+    const levelMap = {
+      ["READ_UNCOMMITTED" /* READ_UNCOMMITTED */]: "READ UNCOMMITTED",
+      ["READ_COMMITTED" /* READ_COMMITTED */]: "READ COMMITTED",
+      ["REPEATABLE_READ" /* REPEATABLE_READ */]: "REPEATABLE READ",
+      ["SERIALIZABLE" /* SERIALIZABLE */]: "SERIALIZABLE"
+    };
+    if (dbType === "postgres") {
+      return `SET TRANSACTION ISOLATION LEVEL ${levelMap[level]}`;
+    } else if (dbType === "mysql") {
+      return `SET TRANSACTION ISOLATION LEVEL ${levelMap[level]}`;
+    }
+    return "";
+  }
+}
+TransactionManager = __legacyDecorateClassTS([
+  Injectable(),
+  __legacyDecorateParamTS(0, Inject(DATABASE_SERVICE_TOKEN)),
+  __legacyMetadataTS("design:paramtypes", [
+    typeof DatabaseService === "undefined" ? Object : DatabaseService
+  ])
+], TransactionManager);
+
+// src/database/connection-pool.ts
+class ConnectionPool {
+  config;
+  options;
+  connections = [];
+  pendingConnections = new Set;
+  isClosing = false;
+  constructor(config, options = {}) {
+    this.config = config;
+    this.options = {
+      maxConnections: options.maxConnections ?? 10,
+      connectionTimeout: options.connectionTimeout ?? 30000,
+      retryCount: options.retryCount ?? 3,
+      retryDelay: options.retryDelay ?? 1000
+    };
+  }
+  async acquire() {
+    if (this.isClosing) {
+      throw new Error("Connection pool is closing");
+    }
+    const idleConnection = this.connections.find((conn) => !conn.inUse);
+    if (idleConnection) {
+      idleConnection.inUse = true;
+      idleConnection.lastUsedAt = Date.now();
+      return idleConnection.connection;
+    }
+    if (this.connections.length < this.options.maxConnections) {
+      const connection = await this.createConnection();
+      const poolConnection = {
+        connection,
+        inUse: true,
+        createdAt: Date.now(),
+        lastUsedAt: Date.now()
+      };
+      this.connections.push(poolConnection);
+      return connection;
+    }
+    return await this.waitForConnection();
+  }
+  release(connection) {
+    const poolConnection = this.connections.find((conn) => conn.connection === connection);
+    if (poolConnection) {
+      poolConnection.inUse = false;
+      poolConnection.lastUsedAt = Date.now();
+    }
+  }
+  async close() {
+    this.isClosing = true;
+    await Promise.all(Array.from(this.pendingConnections));
+    const closePromises = this.connections.map((poolConnection) => this.closeConnection(poolConnection.connection));
+    await Promise.all(closePromises);
+    this.connections = [];
+    this.isClosing = false;
+  }
+  getPoolStats() {
+    const inUse = this.connections.filter((conn) => conn.inUse).length;
+    return {
+      total: this.connections.length,
+      inUse,
+      idle: this.connections.length - inUse,
+      maxConnections: this.options.maxConnections
+    };
+  }
+  async createConnection() {
+    const createPromise = this.createConnectionWithRetry();
+    this.pendingConnections.add(createPromise);
+    try {
+      const connection = await createPromise;
+      return connection;
+    } finally {
+      this.pendingConnections.delete(createPromise);
+    }
+  }
+  async createConnectionWithRetry() {
+    let lastError;
+    for (let i = 0;i <= this.options.retryCount; i++) {
+      try {
+        if (this.config.type === "sqlite") {
+          return await this.createSqliteConnection(this.config.config);
+        } else if (this.config.type === "postgres") {
+          return await this.createPostgresConnection(this.config.config);
+        } else if (this.config.type === "mysql") {
+          return await this.createMysqlConnection(this.config.config);
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        if (i < this.options.retryCount) {
+          await this.sleep(this.options.retryDelay);
+        }
+      }
+    }
+    throw lastError ?? new Error("Failed to create database connection");
+  }
+  async createSqliteConnection(config) {
+    const { Database } = await import("bun:sqlite");
+    const db = new Database(config.path);
+    return db;
+  }
+  async createPostgresConnection(config) {
+    const url = `postgres://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
+    const { SQL } = await Promise.resolve(globalThis.Bun);
+    return new SQL(url, {
+      max: 1,
+      tls: config.ssl ?? false
+    });
+  }
+  async createMysqlConnection(config) {
+    const url = `mysql://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
+    const { SQL } = await Promise.resolve(globalThis.Bun);
+    return new SQL(url, {
+      max: 1
+    });
+  }
+  async closeConnection(connection) {
+    const dbType = this.config.type;
+    if (dbType === "sqlite") {
+      await this.closeSqliteConnection(connection);
+    } else if (dbType === "postgres") {
+      await this.closePostgresConnection(connection);
+    } else if (dbType === "mysql") {
+      await this.closeMysqlConnection(connection);
+    }
+  }
+  async closeSqliteConnection(connection) {
+    if (connection && typeof connection === "object" && "close" in connection && typeof connection.close === "function") {
+      connection.close();
+    }
+  }
+  async closePostgresConnection(_connection) {
+    if (_connection && typeof _connection === "object" && "close" in _connection && typeof _connection.close === "function") {
+      _connection.close();
+    }
+  }
+  async closeMysqlConnection(_connection) {
+    if (_connection && typeof _connection === "object" && "close" in _connection && typeof _connection.close === "function") {
+      _connection.close();
+    }
+  }
+  async waitForConnection() {
+    const startTime = Date.now();
+    const timeout = this.options.connectionTimeout;
+    while (Date.now() - startTime < timeout) {
+      const idleConnection = this.connections.find((conn) => !conn.inUse);
+      if (idleConnection) {
+        idleConnection.inUse = true;
+        idleConnection.lastUsedAt = Date.now();
+        return idleConnection.connection;
+      }
+      await this.sleep(100);
+    }
+    throw new Error(`Connection timeout: No available connection within ${timeout}ms`);
+  }
+  sleep(ms) {
+    return new Promise((resolve2) => setTimeout(resolve2, ms));
+  }
+}
+
+// src/database/connection-manager.ts
+class DatabaseConnectionManager {
+  config;
+  poolOptions;
+  pool;
+  currentConnection = null;
+  status = "disconnected";
+  error;
+  constructor(config, poolOptions = {}) {
+    this.config = config;
+    this.poolOptions = {
+      maxConnections: poolOptions.maxConnections ?? 10,
+      connectionTimeout: poolOptions.connectionTimeout ?? 30000,
+      retryCount: poolOptions.retryCount ?? 3,
+      retryDelay: poolOptions.retryDelay ?? 1000
+    };
+    this.pool = new ConnectionPool(config, this.poolOptions);
+  }
+  async connect() {
+    if (this.status === "connected") {
+      return;
+    }
+    this.status = "connecting";
+    try {
+      this.currentConnection = await this.pool.acquire();
+      this.status = "connected";
+      this.error = undefined;
+    } catch (error) {
+      this.status = "error";
+      this.error = error instanceof Error ? error.message : String(error);
+      throw error;
+    }
+  }
+  async disconnect() {
+    if (this.status === "disconnected" || !this.currentConnection) {
+      return;
+    }
+    try {
+      this.pool.release(this.currentConnection);
+      this.currentConnection = null;
+      this.status = "disconnected";
+      this.error = undefined;
+    } catch (error) {
+      this.status = "error";
+      this.error = error instanceof Error ? error.message : String(error);
+      throw error;
+    }
+  }
+  async closePool() {
+    await this.pool.close();
+    this.currentConnection = null;
+    this.status = "disconnected";
+    this.error = undefined;
+  }
+  async healthCheck() {
+    if (this.status !== "connected" || !this.currentConnection) {
+      return false;
+    }
+    try {
+      if (this.config.type === "sqlite") {
+        return await this.healthCheckSqlite(this.currentConnection);
+      } else if (this.config.type === "postgres") {
+        return await this.healthCheckPostgres(this.currentConnection);
+      } else if (this.config.type === "mysql") {
+        return await this.healthCheckMysql(this.currentConnection);
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+  getPoolStats() {
+    return this.pool.getPoolStats();
+  }
+  getConnectionInfo() {
+    return {
+      status: this.status,
+      type: this.config.type,
+      error: this.error
+    };
+  }
+  getConnection() {
+    return this.currentConnection;
+  }
+  async acquireConnection() {
+    return await this.pool.acquire();
+  }
+  releaseConnection(connection) {
+    this.pool.release(connection);
+  }
+  getDatabaseType() {
+    return this.config.type;
+  }
+  async healthCheckSqlite(connection) {
+    try {
+      if (connection && typeof connection === "object" && "query" in connection && typeof connection.query === "function") {
+        const db = connection;
+        db.query("SELECT 1").all();
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+  async healthCheckPostgres(connection) {
+    try {
+      if (connection && typeof connection === "function") {
+        const result = await connection`SELECT 1`;
+        return Array.isArray(result) && result.length > 0;
+      }
+      if (connection && typeof connection === "object" && "query" in connection && typeof connection.query === "function") {
+        await connection.query("SELECT 1");
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+  async healthCheckMysql(connection) {
+    try {
+      if (connection && typeof connection === "function") {
+        const result = await connection`SELECT 1`;
+        return Array.isArray(result) && result.length > 0;
+      }
+      if (connection && typeof connection === "object" && "query" in connection && typeof connection.query === "function") {
+        await connection.query("SELECT 1");
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+}
+
+// src/database/service.ts
+class DatabaseService2 {
+  connectionManager;
+  options;
+  constructor(options) {
+    this.options = options;
+    this.connectionManager = new DatabaseConnectionManager(options.database, options.pool);
+  }
+  async initialize() {
+    await this.connectionManager.connect();
+  }
+  async close() {
+    await this.connectionManager.disconnect();
+  }
+  async closePool() {
+    await this.connectionManager.closePool();
+  }
+  getPoolStats() {
+    return this.connectionManager.getPoolStats();
+  }
+  getConnection() {
+    return this.connectionManager.getConnection();
+  }
+  get config() {
+    return this.options;
+  }
+  getDatabaseType() {
+    return this.connectionManager.getDatabaseType();
+  }
+  async healthCheck() {
+    if (!this.options.enableHealthCheck) {
+      return true;
+    }
+    return await this.connectionManager.healthCheck();
+  }
+  getConnectionInfo() {
+    return this.connectionManager.getConnectionInfo();
+  }
+  query(sql, params) {
+    const connection = this.getConnection();
+    if (!connection) {
+      throw new Error("Database connection is not established");
+    }
+    const dbType = this.getDatabaseType();
+    if (dbType === "sqlite") {
+      return this.querySqlite(connection, sql, params);
+    } else if (dbType === "postgres" || dbType === "mysql") {
+      return this.queryBunSQL(connection, sql, params);
+    }
+    throw new Error(`Query not supported for database type: ${dbType}`);
+  }
+  querySqlite(connection, sql, params) {
+    if (connection && typeof connection === "object" && "query" in connection && typeof connection.query === "function") {
+      const db = connection;
+      const statement = db.query(sql);
+      const result = params && params.length > 0 ? statement.all(...params) : statement.all();
+      return result;
+    }
+    throw new Error("Invalid SQLite connection");
+  }
+  async queryBunSQL(connection, sql, params) {
+    if (connection && typeof connection === "function") {
+      try {
+        const sqlWithParams = this.interpolateParams(sql, params);
+        const result = await connection`${sqlWithParams}`;
+        return result;
+      } catch {
+        throw new Error("Bun.SQL parameterized queries are not fully supported. Consider using template string queries.");
+      }
+    }
+    if (connection && typeof connection === "object" && "query" in connection && typeof connection.query === "function") {
+      const db = connection;
+      const result = await db.query(sql, ...params ?? []);
+      return result;
+    }
+    throw new Error("Invalid Bun.SQL connection");
+  }
+  interpolateParams(sql, params) {
+    if (!params || params.length === 0) {
+      return sql;
+    }
+    let result = sql;
+    for (let i = 0;i < params.length; i++) {
+      const param = params[i];
+      const value = typeof param === "string" ? `'${param.replace(/'/g, "''")}'` : String(param);
+      result = result.replace("?", value);
+    }
+    return result;
+  }
+}
+DatabaseService2 = __legacyDecorateClassTS([
+  Injectable(),
+  __legacyMetadataTS("design:paramtypes", [
+    typeof DatabaseModuleOptions === "undefined" ? Object : DatabaseModuleOptions
+  ])
+], DatabaseService2);
+
+// src/database/orm/types.ts
+var ORM_SERVICE_TOKEN = Symbol("@dangao/bun-server:orm:service");
+
+// src/database/database-module.ts
+init_transaction_types();
+class DatabaseModule {
+  static forRoot(options) {
+    const providers2 = [];
+    const service = new DatabaseService2(options);
+    providers2.push({
+      provide: DATABASE_SERVICE_TOKEN,
+      useValue: service
+    }, {
+      provide: DATABASE_OPTIONS_TOKEN,
+      useValue: options
+    }, DatabaseService2);
+    if (options.orm?.enabled) {
+      const ormService = new OrmService(service, {
+        enabled: true,
+        drizzle: options.orm.drizzle,
+        databaseService: service
+      });
+      providers2.push({
+        provide: ORM_SERVICE_TOKEN,
+        useValue: ormService
+      }, OrmService);
+    }
+    const transactionManager = new TransactionManager(service);
+    providers2.push({
+      provide: TRANSACTION_SERVICE_TOKEN,
+      useValue: transactionManager
+    }, TransactionManager);
+    const existingMetadata = Reflect.getMetadata(MODULE_METADATA_KEY, DatabaseModule) || {};
+    const databaseExtension = new DatabaseExtension;
+    const metadata = {
+      ...existingMetadata,
+      providers: [...existingMetadata.providers || [], ...providers2],
+      exports: [
+        ...existingMetadata.exports || [],
+        DATABASE_SERVICE_TOKEN,
+        DATABASE_OPTIONS_TOKEN,
+        DatabaseService2,
+        TRANSACTION_SERVICE_TOKEN,
+        TransactionManager,
+        ...options.orm?.enabled ? [ORM_SERVICE_TOKEN, OrmService] : []
+      ],
+      extensions: [
+        ...existingMetadata.extensions || [],
+        databaseExtension
+      ]
+    };
+    Reflect.defineMetadata(MODULE_METADATA_KEY, metadata, DatabaseModule);
+    return DatabaseModule;
+  }
+  static createHealthIndicator(databaseService) {
+    return new DatabaseHealthIndicator(databaseService);
+  }
+}
+DatabaseModule = __legacyDecorateClassTS([
+  Module({
+    providers: []
+  })
+], DatabaseModule);
+// src/database/orm/decorators.ts
+import"reflect-metadata";
+var ENTITY_METADATA_KEY = Symbol("@dangao/bun-server:orm:entity");
+var COLUMN_METADATA_KEY = Symbol("@dangao/bun-server:orm:column");
+function Entity(tableName) {
+  return (target) => {
+    Reflect.defineMetadata(ENTITY_METADATA_KEY, { tableName }, target);
+  };
+}
+function Column(options) {
+  return (target, propertyKey) => {
+    const existingColumns = Reflect.getMetadata(COLUMN_METADATA_KEY, target.constructor) || [];
+    const existingIndex = existingColumns.findIndex((col) => col.propertyKey === String(propertyKey));
+    const columnDef = {
+      name: options?.name ?? String(propertyKey),
+      type: options?.type ?? "TEXT",
+      primaryKey: options?.primaryKey ?? false,
+      autoIncrement: options?.autoIncrement ?? false,
+      nullable: options?.nullable !== undefined ? options.nullable : true,
+      defaultValue: options?.defaultValue,
+      propertyKey: String(propertyKey)
+    };
+    if (existingIndex >= 0) {
+      const existing = existingColumns[existingIndex];
+      existingColumns[existingIndex] = {
+        ...existing,
+        name: options?.name ?? existing.name,
+        type: options?.type ?? existing.type,
+        primaryKey: options?.primaryKey !== undefined ? options.primaryKey : existing.primaryKey,
+        nullable: options?.nullable !== undefined ? options.nullable : existing.nullable,
+        autoIncrement: options?.autoIncrement !== undefined ? options.autoIncrement : existing.autoIncrement,
+        defaultValue: options?.defaultValue !== undefined ? options.defaultValue : existing.defaultValue,
+        propertyKey: String(propertyKey)
+      };
+    } else {
+      existingColumns.push(columnDef);
+    }
+    Reflect.defineMetadata(COLUMN_METADATA_KEY, existingColumns, target.constructor);
+  };
+}
+function PrimaryKey() {
+  return Column({ primaryKey: true, nullable: false });
+}
+function getEntityMetadata(target) {
+  if (typeof target === "function" || typeof target === "object" && target !== null) {
+    return Reflect.getMetadata(ENTITY_METADATA_KEY, target);
+  }
+  return;
+}
+function getColumnMetadata(target) {
+  if (typeof target === "function" || typeof target === "object" && target !== null) {
+    return Reflect.getMetadata(COLUMN_METADATA_KEY, target) || [];
+  }
+  return [];
+}
+// src/database/orm/repository-decorator.ts
+import"reflect-metadata";
+var REPOSITORY_METADATA_KEY = Symbol("@dangao/bun-server:orm:repository");
+function Repository(tableName, primaryKey = "id") {
+  return function(target) {
+    Injectable()(target);
+    Reflect.defineMetadata(REPOSITORY_METADATA_KEY, { tableName, primaryKey }, target);
+    return target;
+  };
+}
+function getRepositoryMetadata(target) {
+  if (typeof target === "function" || typeof target === "object" && target !== null) {
+    return Reflect.getMetadata(REPOSITORY_METADATA_KEY, target);
+  }
+  return;
+}
+
+// src/database/orm/index.ts
+init_transaction_decorator();
+
+// src/database/orm/repository.ts
+class BaseRepository {
+  databaseService;
+  constructor(databaseService) {
+    this.databaseService = databaseService;
+  }
+  async findAll() {
+    const sql = `SELECT * FROM ${this.tableName}`;
+    const result = await this.executeQuery(sql);
+    return Array.isArray(result) ? result : [];
+  }
+  async findById(id) {
+    const sql = `SELECT * FROM ${this.tableName} WHERE ${this.primaryKey} = ?`;
+    const result = await this.executeQuery(sql, [id]);
+    if (Array.isArray(result) && result.length > 0) {
+      return result[0];
+    }
+    return null;
+  }
+  async create(data) {
+    const keys = Object.keys(data);
+    const values = Object.values(data);
+    const placeholders = keys.map(() => "?").join(", ");
+    const sql = `INSERT INTO ${this.tableName} (${keys.join(", ")}) VALUES (${placeholders})`;
+    await this.executeQuery(sql, values);
+    const lastIdResult = await this.executeQuery("SELECT last_insert_rowid() as id");
+    const lastId = Array.isArray(lastIdResult) && lastIdResult[0] ? lastIdResult[0].id : null;
+    if (lastId !== null) {
+      return await this.findById(lastId);
+    }
+    return data;
+  }
+  async update(id, data) {
+    const keys = Object.keys(data);
+    const values = Object.values(data);
+    const setClause = keys.map((key) => `${key} = ?`).join(", ");
+    const sql = `UPDATE ${this.tableName} SET ${setClause} WHERE ${this.primaryKey} = ?`;
+    await this.executeQuery(sql, [...values, id]);
+    return await this.findById(id);
+  }
+  async delete(id) {
+    const sql = `DELETE FROM ${this.tableName} WHERE ${this.primaryKey} = ?`;
+    await this.executeQuery(sql, [id]);
+    return true;
+  }
+  async executeQuery(sql, params) {
+    const result = this.databaseService.query(sql, params);
+    if (result instanceof Promise) {
+      const resolved = await result;
+      return Array.isArray(resolved) ? resolved : [resolved];
+    }
+    return Array.isArray(result) ? result : [result];
+  }
+}
+BaseRepository = __legacyDecorateClassTS([
+  __legacyDecorateParamTS(0, Inject(DATABASE_SERVICE_TOKEN)),
+  __legacyMetadataTS("design:paramtypes", [
+    typeof DatabaseService === "undefined" ? Object : DatabaseService
+  ])
+], BaseRepository);
+// src/database/orm/drizzle-repository.ts
+class DrizzleBaseRepository {
+  databaseService;
+  constructor(databaseService) {
+    this.databaseService = databaseService;
+  }
+}
+
+// src/database/orm/index.ts
+init_transaction_interceptor();
+init_transaction_types();
 // src/testing/harness.ts
 import { performance as performance2 } from "perf_hooks";
 
@@ -3965,6 +5058,10 @@ class StressTester {
 }
 export {
   requiresAuth,
+  getTransactionMetadata,
+  getRepositoryMetadata,
+  getEntityMetadata,
+  getColumnMetadata,
   getAuthMetadata,
   createUserKeyGenerator,
   createTokenKeyGenerator,
@@ -3985,6 +5082,11 @@ export {
   Validate,
   UseMiddleware,
   UnauthorizedException,
+  Transactional,
+  TransactionStatus,
+  TransactionManager,
+  TransactionInterceptor,
+  TRANSACTION_SERVICE_TOKEN,
   SwaggerModule,
   SwaggerGenerator,
   SwaggerExtension,
@@ -3997,18 +5099,23 @@ export {
   RoleBasedAccessDecisionManager,
   ResponseBuilder,
   RequestWrapper,
+  Repository,
   RateLimit,
   Query,
+  Propagation,
   PrometheusFormatter,
+  PrimaryKey,
   PerformanceHarness,
   ParamBinder,
   Param,
   PUT,
   POST,
   PATCH,
+  OrmService,
   OnOpen,
   OnMessage,
   OnClose,
+  ORM_SERVICE_TOKEN,
   OAuth2Service,
   OAuth2Controller,
   OAuth2AuthenticationProvider,
@@ -4030,6 +5137,7 @@ export {
   JwtAuthenticationProvider,
   JWT_UTIL_TOKEN,
   JWTUtil,
+  IsolationLevel,
   IsString,
   IsOptional,
   IsNumber,
@@ -4045,17 +5153,29 @@ export {
   GET,
   ForbiddenException,
   ExceptionFilterRegistry,
+  Entity,
+  DrizzleBaseRepository,
+  DatabaseService2 as DatabaseService,
+  DatabaseModule,
+  DatabaseHealthIndicator,
+  DatabaseExtension,
+  DatabaseConnectionManager,
   DELETE,
+  DATABASE_SERVICE_TOKEN,
+  DATABASE_OPTIONS_TOKEN,
   ControllerRegistry,
   Controller,
   Context,
   Container,
+  ConnectionPool,
   ConfigService,
   ConfigModule,
+  Column,
   CONFIG_SERVICE_TOKEN,
   BunServer,
   BodyParser,
   Body,
+  BaseRepository,
   BadRequestException,
   AuthenticationManager,
   Auth,

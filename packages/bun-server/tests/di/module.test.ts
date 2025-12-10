@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, afterEach, describe, expect, test } from 'bun:test';
 
 import { Application } from '../../src/core/application';
 import { Controller, ControllerRegistry } from '../../src/controller/controller';
@@ -11,6 +11,14 @@ import { Context } from '../../src/core/context';
 
 describe('ModuleRegistry', () => {
   beforeEach(() => {
+    // 清理全局注册表，避免测试间污染
+    RouteRegistry.getInstance().clear();
+    ControllerRegistry.getInstance().clear();
+    ModuleRegistry.getInstance().clear();
+  });
+
+  afterEach(() => {
+    // 确保测试后清理
     RouteRegistry.getInstance().clear();
     ControllerRegistry.getInstance().clear();
     ModuleRegistry.getInstance().clear();

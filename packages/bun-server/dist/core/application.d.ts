@@ -35,11 +35,19 @@ export declare class Application {
     /**
      * 启动应用
      */
-    listen(port?: number, hostname?: string): void;
+    listen(port?: number, hostname?: string): Promise<void>;
+    /**
+     * 初始化所有扩展
+     */
+    private initializeExtensions;
     /**
      * 停止应用
      */
-    stop(): void;
+    stop(): Promise<void>;
+    /**
+     * 关闭所有扩展
+     */
+    private closeExtensions;
     /**
      * 处理请求
      * @param context - 请求上下文

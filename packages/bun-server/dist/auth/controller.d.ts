@@ -15,7 +15,7 @@ export declare class OAuth2Controller {
      * 授权端点
      * GET /oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&state=...
      */
-    authorize(clientId: string, redirectUri: string, state?: string, scope?: string): Response;
+    authorize(clientId: string | null, redirectUri: string | null, responseType: string | null, state?: string | null, scope?: string | null): Response;
     /**
      * 令牌端点
      * POST /oauth2/token

@@ -63,10 +63,13 @@ export class Application {
   /**
    * 启动应用
    */
-  public listen(port?: number, hostname?: string): void {
+  public async listen(port?: number, hostname?: string): Promise<void> {
     if (this.server?.isRunning()) {
       throw new Error('Application is already running');
     }
+
+    // 初始化所有扩展（包括数据库连接等）
+    await this.initializeExtensions();
 
     const serverOptions: ServerOptions = {
       port: port ?? this.options.port ?? 3000,
@@ -80,10 +83,57 @@ export class Application {
   }
 
   /**
+   * 初始化所有扩展
+   */
+  private async initializeExtensions(): Promise<void> {
+    const container = this.getContainer();
+    
+    // 初始化应用级别的扩展
+    for (const extension of this.extensions) {
+      // 如果扩展有 initialize 方法，调用它
+      if (
+        extension &&
+        typeof extension === 'object' &&
+        'initialize' in extension &&
+        typeof extension.initialize === 'function'
+      ) {
+        await extension.initialize(container);
+      }
+    }
+
+    // 初始化模块中的扩展（通过已注册的扩展列表）
+    // 模块扩展已经在 registerModule 时添加到 this.extensions
+    // 所以上面的循环已经处理了
+  }
+
+  /**
    * 停止应用
    */
-  public stop(): void {
+  public async stop(): Promise<void> {
+    // 关闭所有扩展（包括数据库连接等）
+    await this.closeExtensions();
     this.server?.stop();
+  }
+
+  /**
+   * 关闭所有扩展
+   */
+  private async closeExtensions(): Promise<void> {
+    const container = this.getContainer();
+
+    // 关闭所有扩展（包括模块扩展，因为它们已经在 registerModule 时添加到 this.extensions）
+    // 按相反顺序关闭，确保依赖关系正确
+    for (let i = this.extensions.length - 1; i >= 0; i--) {
+      const extension = this.extensions[i];
+      if (
+        extension &&
+        typeof extension === 'object' &&
+        'close' in extension &&
+        typeof extension.close === 'function'
+      ) {
+        await extension.close(container);
+      }
+    }
   }
 
   /**

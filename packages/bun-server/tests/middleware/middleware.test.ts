@@ -19,8 +19,8 @@ describe('Middleware Integration', () => {
     app = new Application({ port });
   });
 
-  afterEach(() => {
-    app.stop();
+  afterEach(async () => {
+    await app.stop();
     RouteRegistry.getInstance().clear();
     ControllerRegistry.getInstance().clear();
   });
@@ -42,7 +42,7 @@ describe('Middleware Integration', () => {
     }
 
     app.registerController(GlobalController);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/middleware/global`);
     expect(response.headers.get('x-global-middleware')).toBe('enabled');
@@ -75,7 +75,7 @@ describe('Middleware Integration', () => {
     }
 
     app.registerController(ControllerWithMiddleware);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/middleware/controller`);
     const data = await response.json();
@@ -103,7 +103,7 @@ describe('Middleware Integration', () => {
     }
 
     app.registerController(BlockedController);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/middleware/blocked`, {
       method: 'POST',

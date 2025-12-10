@@ -31,19 +31,28 @@ export class OAuth2Controller {
    * GET /oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&state=...
    */
   @GET('/authorize')
-  public authorize(@Query('client_id') clientId: string, @Query('redirect_uri') redirectUri: string, @Query('state') state?: string, @Query('scope') scope?: string) {
-    const query: Record<string, string> = {
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      ...(state && { state }),
-      ...(scope && { scope }),
-    };
+  public authorize(
+    @Query('client_id') clientId: string | null,
+    @Query('redirect_uri') redirectUri: string | null,
+    @Query('response_type') responseType: string | null,
+    @Query('state') state?: string | null,
+    @Query('scope') scope?: string | null,
+  ) {
+    // 验证必需参数
+    if (!clientId || !redirectUri) {
+      throw new Error('Missing required parameters: client_id and redirect_uri are required');
+    }
+
+    if (responseType !== 'code') {
+      throw new Error(`Unsupported response_type: ${responseType}. Only 'code' is supported.`);
+    }
+
     const request: OAuth2AuthorizationRequest = {
-      clientId: query.client_id || '',
-      redirectUri: query.redirect_uri || '',
+      clientId,
+      redirectUri,
       responseType: 'code',
-      scope: query.scope,
-      state: query.state,
+      scope: scope || undefined,
+      state: state || undefined,
     };
 
     // 验证请求

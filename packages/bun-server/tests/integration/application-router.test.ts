@@ -8,9 +8,9 @@ import { getTestPort } from '../utils/test-port';
 describe('Application with Router', () => {
   let app: Application;
 
-  afterEach(() => {
+  afterEach(async () => {
     if (app) {
-      app.stop();
+      await app.stop();
     }
     RouteRegistry.getInstance().clear();
     ControllerRegistry.getInstance().clear();
@@ -23,7 +23,7 @@ describe('Application with Router', () => {
     registry.get('/api/users', (ctx: Context) => {
       return ctx.createResponse({ message: 'Hello' });
     });
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/users`);
     expect(response.status).toBe(200);
@@ -40,7 +40,7 @@ describe('Application with Router', () => {
     registry.get('/api/users/:id', (ctx: Context) => {
       return ctx.createResponse({ id: ctx.getParam('id') });
     });
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/users/123`);
     expect(response.status).toBe(200);
@@ -53,7 +53,7 @@ describe('Application with Router', () => {
   test('should return 404 for non-existent route', async () => {
     const port = getTestPort();
     app = new Application({ port });
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/unknown`);
     expect(response.status).toBe(404);
@@ -70,7 +70,7 @@ describe('Application with Router', () => {
     registry.post('/api/users', (ctx: Context) => {
       return ctx.createResponse({ message: 'Created' });
     });
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/users`, {
       method: 'POST',

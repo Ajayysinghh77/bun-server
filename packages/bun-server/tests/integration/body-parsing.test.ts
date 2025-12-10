@@ -8,9 +8,9 @@ import { getTestPort } from '../utils/test-port';
 describe('Application Body Parsing Integration', () => {
   let app: Application;
 
-  afterEach(() => {
+  afterEach(async () => {
     if (app) {
-      app.stop();
+      await app.stop();
     }
     RouteRegistry.getInstance().clear();
     ControllerRegistry.getInstance().clear();
@@ -24,7 +24,7 @@ describe('Application Body Parsing Integration', () => {
       const body = await ctx.getBody();
       return ctx.createResponse({ received: body });
     });
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/users-json`, {
       method: 'POST',
@@ -45,7 +45,7 @@ describe('Application Body Parsing Integration', () => {
       const body = await ctx.getBody();
       return ctx.createResponse({ received: body });
     });
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/users-urlencoded`, {
       method: 'POST',
@@ -71,7 +71,7 @@ describe('Application Body Parsing Integration', () => {
         bodyExists: body !== undefined,
       });
     });
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/users-empty`, {
       method: 'POST',

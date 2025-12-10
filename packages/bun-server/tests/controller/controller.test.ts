@@ -17,9 +17,9 @@ describe('Controller Integration', () => {
     app = new Application({ port });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     if (app) {
-      app.stop();
+      await app.stop();
     }
     RouteRegistry.getInstance().clear();
     ControllerRegistry.getInstance().clear();
@@ -35,7 +35,7 @@ describe('Controller Integration', () => {
     }
 
     app.registerController(UserController);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/users`);
     expect(response.status).toBe(200);
@@ -53,7 +53,7 @@ describe('Controller Integration', () => {
     }
 
     app.registerController(UserController);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/users/123`);
     expect(response.status).toBe(200);
@@ -72,7 +72,7 @@ describe('Controller Integration', () => {
     }
 
     app.registerController(UserController);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/users/search?q=test`);
     expect(response.status).toBe(200);
@@ -90,7 +90,7 @@ describe('Controller Integration', () => {
     }
 
     app.registerController(UserController);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/users`, {
       method: 'POST',
@@ -128,7 +128,7 @@ describe('Controller Integration', () => {
     }
 
     app.registerController(UserController);
-    app.listen();
+    await app.listen();
 
     const response = await fetch(`http://localhost:${port}/api/users-di/123`);
     if (response.status !== 200) {

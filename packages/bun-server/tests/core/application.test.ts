@@ -5,9 +5,9 @@ import { getTestPort } from '../utils/test-port';
 describe('Application', () => {
   let app: Application;
 
-  afterEach(() => {
+  afterEach(async () => {
     if (app) {
-      app.stop();
+      await app.stop();
     }
   });
 
@@ -22,21 +22,21 @@ describe('Application', () => {
     expect(app).toBeInstanceOf(Application);
   });
 
-  test('should start server', () => {
+  test('should start server', async () => {
     const port = getTestPort();
     app = new Application({ port });
-    app.listen();
+    await app.listen();
     
     const server = app.getServer();
     expect(server).toBeDefined();
     expect(server?.isRunning()).toBe(true);
   });
 
-  test('should stop server', () => {
+  test('should stop server', async () => {
     const port = getTestPort();
     app = new Application({ port });
-    app.listen();
-    app.stop();
+    await app.listen();
+    await app.stop();
     
     const server = app.getServer();
     expect(server?.isRunning()).toBe(false);
@@ -45,7 +45,7 @@ describe('Application', () => {
   test('should handle request with 404 by default', async () => {
     const port = getTestPort();
     app = new Application({ port });
-    app.listen();
+    await app.listen();
     
     const response = await fetch(`http://localhost:${port}/api/users`);
     expect(response.status).toBe(404);

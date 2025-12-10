@@ -55,9 +55,9 @@ describe('OAuth2 E2E Integration Tests', () => {
     Reflect.deleteMetadata(MODULE_METADATA_KEY, SecurityModule);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     if (app) {
-      app.stop();
+      await app.stop();
     }
     RouteRegistry.getInstance().clear();
     ControllerRegistry.getInstance().clear();
@@ -80,7 +80,7 @@ describe('OAuth2 E2E Integration Tests', () => {
     });
     app.registerModule(SecurityModule);
     app.registerController(ProtectedController);
-    app.listen();
+    await app.listen();
 
     // 2. 请求授权端点
     const authorizeUrl = new URL(`${baseUrl()}/oauth2/authorize`);
@@ -97,6 +97,7 @@ describe('OAuth2 E2E Integration Tests', () => {
     expect(authorizeResponse.status).toBe(302);
     const location = authorizeResponse.headers.get('location');
     expect(location).toBeDefined();
+    expect(location).not.toBeNull();
     expect(location).toContain('code=');
     expect(location).toContain('state=test-state');
 
@@ -162,7 +163,7 @@ describe('OAuth2 E2E Integration Tests', () => {
     });
     app.registerModule(SecurityModule);
     app.registerController(ProtectedController);
-    app.listen();
+    await app.listen();
 
     // 1. 获取初始访问令牌和刷新令牌
     const authorizeUrl = new URL(`${baseUrl()}/oauth2/authorize`);
@@ -173,8 +174,14 @@ describe('OAuth2 E2E Integration Tests', () => {
     const authorizeResponse = await fetch(authorizeUrl.toString(), {
       redirect: 'manual',
     });
-    const location = authorizeResponse.headers.get('location')!;
-    const code = new URL(location).searchParams.get('code')!;
+    expect(authorizeResponse.status).toBe(302);
+    const location = authorizeResponse.headers.get('location');
+    expect(location).not.toBeNull();
+    if (!location) {
+      throw new Error('Location header is null');
+    }
+    const code = new URL(location!).searchParams.get('code');
+    expect(code).toBeDefined();
 
     const tokenResponse = await fetch(`${baseUrl()}/oauth2/token`, {
       method: 'POST',
@@ -235,7 +242,7 @@ describe('OAuth2 E2E Integration Tests', () => {
       enableOAuth2Endpoints: true,
     });
     app.registerModule(SecurityModule);
-    app.listen();
+    await app.listen();
 
     const tokenResponse = await fetch(`${baseUrl()}/oauth2/token`, {
       method: 'POST',
@@ -269,7 +276,7 @@ describe('OAuth2 E2E Integration Tests', () => {
       enableOAuth2Endpoints: true,
     });
     app.registerModule(SecurityModule);
-    app.listen();
+    await app.listen();
 
     // 获取有效的授权码
     const authorizeUrl = new URL(`${baseUrl()}/oauth2/authorize`);
@@ -280,8 +287,14 @@ describe('OAuth2 E2E Integration Tests', () => {
     const authorizeResponse = await fetch(authorizeUrl.toString(), {
       redirect: 'manual',
     });
-    const location = authorizeResponse.headers.get('location')!;
-    const code = new URL(location).searchParams.get('code')!;
+    expect(authorizeResponse.status).toBe(302);
+    const location = authorizeResponse.headers.get('location');
+    expect(location).not.toBeNull();
+    if (!location) {
+      throw new Error('Location header is null');
+    }
+    const code = new URL(location!).searchParams.get('code');
+    expect(code).toBeDefined();
 
     // 使用错误的客户端密钥
     const tokenResponse = await fetch(`${baseUrl()}/oauth2/token`, {
@@ -314,7 +327,7 @@ describe('OAuth2 E2E Integration Tests', () => {
       enableOAuth2Endpoints: true,
     });
     app.registerModule(SecurityModule);
-    app.listen();
+    await app.listen();
 
     // 获取有效的授权码
     const authorizeUrl = new URL(`${baseUrl()}/oauth2/authorize`);
@@ -325,8 +338,14 @@ describe('OAuth2 E2E Integration Tests', () => {
     const authorizeResponse = await fetch(authorizeUrl.toString(), {
       redirect: 'manual',
     });
-    const location = authorizeResponse.headers.get('location')!;
-    const code = new URL(location).searchParams.get('code')!;
+    expect(authorizeResponse.status).toBe(302);
+    const location = authorizeResponse.headers.get('location');
+    expect(location).not.toBeNull();
+    if (!location) {
+      throw new Error('Location header is null');
+    }
+    const code = new URL(location!).searchParams.get('code');
+    expect(code).toBeDefined();
 
     // 使用错误的 redirect_uri
     const tokenResponse = await fetch(`${baseUrl()}/oauth2/token`, {
@@ -361,7 +380,7 @@ describe('OAuth2 E2E Integration Tests', () => {
     });
     app.registerModule(SecurityModule);
     app.registerController(ProtectedController);
-    app.listen();
+    await app.listen();
 
     // 尝试访问受保护资源而不提供令牌
     const response = await fetch(`${baseUrl()}/api/protected/profile`);
@@ -386,7 +405,7 @@ describe('OAuth2 E2E Integration Tests', () => {
     });
     app.registerModule(SecurityModule);
     app.registerController(ProtectedController);
-    app.listen();
+    await app.listen();
 
     // 使用无效的令牌访问受保护资源
     const response = await fetch(`${baseUrl()}/api/protected/profile`, {
@@ -410,7 +429,7 @@ describe('OAuth2 E2E Integration Tests', () => {
     });
     app.registerModule(SecurityModule);
     app.registerController(ProtectedController);
-    app.listen();
+    await app.listen();
 
     // 获取访问令牌（用户默认没有 admin 角色）
     const authorizeUrl = new URL(`${baseUrl()}/oauth2/authorize`);
@@ -421,8 +440,14 @@ describe('OAuth2 E2E Integration Tests', () => {
     const authorizeResponse = await fetch(authorizeUrl.toString(), {
       redirect: 'manual',
     });
-    const location = authorizeResponse.headers.get('location')!;
-    const code = new URL(location).searchParams.get('code')!;
+    expect(authorizeResponse.status).toBe(302);
+    const location = authorizeResponse.headers.get('location');
+    expect(location).not.toBeNull();
+    if (!location) {
+      throw new Error('Location header is null');
+    }
+    const code = new URL(location!).searchParams.get('code');
+    expect(code).toBeDefined();
 
     const tokenResponse = await fetch(`${baseUrl()}/oauth2/token`, {
       method: 'POST',
@@ -465,7 +490,7 @@ describe('OAuth2 E2E Integration Tests', () => {
       enableOAuth2Endpoints: true,
     });
     app.registerModule(SecurityModule);
-    app.listen();
+    await app.listen();
 
     const authorizeUrl = new URL(`${baseUrl()}/oauth2/authorize`);
     authorizeUrl.searchParams.set('client_id', 'invalid-client');
@@ -491,7 +516,7 @@ describe('OAuth2 E2E Integration Tests', () => {
       enableOAuth2Endpoints: true,
     });
     app.registerModule(SecurityModule);
-    app.listen();
+    await app.listen();
 
     const authorizeUrl = new URL(`${baseUrl()}/oauth2/authorize`);
     authorizeUrl.searchParams.set('client_id', oauth2Client.clientId);
@@ -527,7 +552,7 @@ describe('OAuth2 E2E Integration Tests', () => {
     });
     app.registerModule(SecurityModule);
     app.registerController(ProtectedController);
-    app.listen();
+    await app.listen();
 
     // 获取访问令牌
     const authorizeUrl = new URL(`${baseUrl()}/oauth2/authorize`);
@@ -538,8 +563,14 @@ describe('OAuth2 E2E Integration Tests', () => {
     const authorizeResponse = await fetch(authorizeUrl.toString(), {
       redirect: 'manual',
     });
-    const location = authorizeResponse.headers.get('location')!;
-    const code = new URL(location).searchParams.get('code')!;
+    expect(authorizeResponse.status).toBe(302);
+    const location = authorizeResponse.headers.get('location');
+    expect(location).not.toBeNull();
+    if (!location) {
+      throw new Error('Location header is null');
+    }
+    const code = new URL(location!).searchParams.get('code');
+    expect(code).toBeDefined();
 
     const tokenResponse = await fetch(`${baseUrl()}/oauth2/token`, {
       method: 'POST',
