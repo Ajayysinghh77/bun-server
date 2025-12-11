@@ -1,13 +1,14 @@
 # 示例项目
 
-| 文件             | 说明                                                                    | 运行方式                          | 端口 |
-| ---------------- | ----------------------------------------------------------------------- | --------------------------------- | ---- |
-| `basic-app.ts`   | 最小可运行示例，包含 DI、控制器与验证                                   | `bun run examples/basic-app.ts`   | 3100 |
-| `full-app.ts`    | 综合示例，集成日志、CORS、上传、静态资源与 WebSocket                    | `bun run examples/full-app.ts`    | 3200 |
-| `cache-app.ts`   | 缓存示例，演示 CacheModule 的使用（@Cacheable, @CacheEvict, @CachePut） | `bun run examples/cache-app.ts`   | 3200 |
-| `queue-app.ts`   | 队列示例，演示 QueueModule 的使用（任务队列、Cron 定时任务）            | `bun run examples/queue-app.ts`   | 3300 |
-| `session-app.ts` | Session 示例，演示 SessionModule 的使用（登录、购物车）                 | `bun run examples/session-app.ts` | 3400 |
-| `perf/app.ts`    | 性能压测示例，暴露 `/api/ping` 供 wrk 等工具测试                        | `bun run examples/perf/app.ts`    | 3300 |
+| 文件                   | 说明                                                                    | 运行方式                                | 端口 |
+| ---------------------- | ----------------------------------------------------------------------- | --------------------------------------- | ---- |
+| `basic-app.ts`         | 最小可运行示例，包含 DI、控制器与验证                                   | `bun run examples/basic-app.ts`         | 3100 |
+| `full-app.ts`          | 综合示例，集成日志、CORS、上传、静态资源与 WebSocket                    | `bun run examples/full-app.ts`          | 3200 |
+| `cache-app.ts`         | 缓存示例，演示 CacheModule 的使用（@Cacheable, @CacheEvict, @CachePut） | `bun run examples/cache-app.ts`         | 3200 |
+| `queue-app.ts`         | 队列示例，演示 QueueModule 的使用（任务队列、Cron 定时任务）            | `bun run examples/queue-app.ts`         | 3300 |
+| `session-app.ts`       | Session 示例，演示 SessionModule 的使用（登录、购物车）                 | `bun run examples/session-app.ts`       | 3400 |
+| `database-test-app.ts` | 数据库测试工具，Web UI 界面测试 PostgreSQL/MySQL 连接                   | `bun run examples/database-test-app.ts` | 3000 |
+| `perf/app.ts`          | 性能压测示例，暴露 `/api/ping` 供 wrk 等工具测试                        | `bun run examples/perf/app.ts`          | 3300 |
 
 > 运行前请确保 `bun install` 已完成依赖安装。示例默认监听不同端口，可通过设置
 > `PORT` 环境变量覆盖（例如 `PORT=0 bun run ...` 交由系统分配端口）。
@@ -29,6 +30,9 @@ bun run examples/queue-app.ts
 
 # Session 示例
 bun run examples/session-app.ts
+
+# 数据库测试工具
+bun run examples/database-test-app.ts
 
 # 性能测试
 bun run examples/perf/app.ts
@@ -63,5 +67,20 @@ wrk -t4 -c64 -d30s http://localhost:3300/api/ping
 - **Session 数据**：存储和读取用户数据（如购物车）
 - **Session 中间件**：自动处理 Session Cookie
 - **Session 装饰器**：使用 `@Session()` 装饰器注入 Session 对象
+
+### 数据库测试工具 (`database-test-app.ts`)
+
+提供 Web UI 界面，用于测试 PostgreSQL 和 MySQL 数据库连接：
+
+- **连接管理**：手动填写数据库连接信息（主机、端口、数据库名、用户名、密码）
+- **功能检查**：
+  - ✅ 连接测试：验证数据库连接是否正常
+  - 📊 查询测试：执行测试查询，验证查询功能
+  - 🔄 事务测试：测试事务回滚功能
+  - 🏥 健康检查：检查数据库连接健康状态
+  - 📈 连接池统计：查看连接池使用情况
+  - ❌ 断开连接：关闭数据库连接
+
+访问 `http://localhost:3000` 使用 Web UI 界面进行数据库连接测试。
 
 所有示例都会在控制台输出服务地址和可用端点，按需调整端口或中间件配置即可。

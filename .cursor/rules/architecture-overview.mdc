@@ -7,6 +7,33 @@ alwaysApply: true
 
 本文档帮助 AI agent 快速理解项目架构、模块组织和常见模式。
 
+## 运行时环境
+
+### Bun Runtime
+
+**重要**：本项目基于 **Bun Runtime**，而非 Node.js。
+
+1. **底层实现差异**
+   - 涉及到 Node.js 相关底层实现时，必须明确本项目是基于 **Bun runtime** 的
+   - Bun 使用 JavaScriptCore（而非 V8），API 和性能特性与 Node.js 不同
+   - 优先使用 Bun 原生 API（如 `Bun.serve()`, `Bun.SQL`, `Bun.file()` 等）
+   - 避免直接使用 Node.js 特定的底层 API，除非 Bun 明确支持
+
+2. **官方文档参考**
+   - 涉及到底层相关接口使用问题时，优先参考官方文档：
+     - **官方文档**：https://bun.com/docs
+     - **GitHub 仓库**：https://github.com/oven-sh/bun
+   - 在实现底层功能（如数据库连接、文件操作、HTTP 服务器等）时，应查阅 Bun
+     官方文档确认正确的 API 使用方式
+   - 遇到 API 兼容性问题时，参考 Bun 的 Node.js 兼容性文档
+
+### Bun 特定特性
+
+- **性能优势**：充分利用 Bun 的快速启动和低内存占用
+- **原生 API**：优先使用 Bun 原生 API 而非 Node.js polyfill
+- **类型支持**：Bun 内置 TypeScript 支持，无需额外编译步骤
+- **测试框架**：使用 `bun:test` 而非 Jest 或其他测试框架
+
 ## 项目结构
 
 ```
