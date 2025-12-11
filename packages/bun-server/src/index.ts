@@ -208,4 +208,63 @@ export {
   type BenchmarkResult,
   type StressResult,
 } from './testing/harness';
+// Cache 模块
+export {
+  CacheModule,
+  CacheService,
+  Cacheable,
+  CacheEvict,
+  CachePut,
+  MemoryCacheStore,
+  RedisCacheStore,
+  CACHE_SERVICE_TOKEN,
+  CACHE_OPTIONS_TOKEN,
+} from './cache';
+export type {
+  CacheModuleOptions,
+  CacheStore,
+  RedisCacheStoreOptions,
+  CacheableOptions,
+  CacheEvictOptions,
+  CachePutOptions,
+} from './cache';
+// Queue 模块
+export {
+  QueueModule,
+  QueueService,
+  Queue,
+  Cron,
+  MemoryQueueStore,
+  QUEUE_SERVICE_TOKEN,
+  QUEUE_OPTIONS_TOKEN,
+} from './queue';
+export type {
+  QueueModuleOptions,
+  QueueStore,
+  Job,
+  JobData,
+  JobHandler,
+  JobOptions,
+  CronOptions,
+  QueueOptions,
+  CronDecoratorOptions,
+} from './queue';
+// Session 模块
+export {
+  SessionModule,
+  SessionService,
+  createSessionMiddleware,
+  SessionDecorator as Session,
+  MemorySessionStore,
+  RedisSessionStore,
+  SESSION_SERVICE_TOKEN,
+  SESSION_OPTIONS_TOKEN,
+} from './session';
+export type {
+  SessionModuleOptions,
+  SessionStore,
+  Session as SessionType,
+  SessionData,
+  RedisSessionStoreOptions,
+} from './session';
 

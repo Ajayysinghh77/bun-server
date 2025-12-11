@@ -6,7 +6,10 @@
     "start:auth-app": "bun auth-app.ts",
     "start:full-app": "bun full-app.ts",
     "start:multi-module": "bun multi-module-app.ts",
-    "start:metrics-app": "bun metrics-rate-limit-app.ts"
+    "start:metrics-app": "bun metrics-rate-limit-app.ts",
+    "start:cache-app": "bun cache-app.ts",
+    "start:queue-app": "bun queue-app.ts",
+    "start:session-app": "bun session-app.ts"
   },
   "dependencies": {
     "@dangao/bun-server": "workspace:^",
