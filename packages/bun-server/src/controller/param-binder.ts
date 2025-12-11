@@ -1,5 +1,8 @@
 import type { Context } from '../core/context';
 import { getParamMetadata, ParamType, type ParamMetadata } from './decorators';
+import { Container } from '../di/container';
+import { SessionService } from '../session/service';
+import { SESSION_SERVICE_TOKEN } from '../session/types';
 
 /**
  * 参数绑定器
@@ -11,12 +14,14 @@ export class ParamBinder {
    * @param target - 目标对象
    * @param propertyKey - 属性键
    * @param context - 请求上下文
+   * @param container - DI 容器（用于解析 Session）
    * @returns 参数数组
    */
   public static async bind(
     target: any,
     propertyKey: string,
     context: Context,
+    container?: Container,
   ): Promise<unknown[]> {
     const metadata = getParamMetadata(target, propertyKey);
     const params: unknown[] = [];
@@ -26,7 +31,7 @@ export class ParamBinder {
 
     // 绑定参数
     for (const meta of metadata) {
-      const value = await this.getValue(meta, context);
+      const value = await this.getValue(meta, context, container);
       params[meta.index] = value;
     }
 
@@ -46,9 +51,10 @@ export class ParamBinder {
    * 获取参数值
    * @param meta - 参数元数据
    * @param context - 请求上下文
+   * @param container - DI 容器（用于解析 Session）
    * @returns 参数值
    */
-  private static async getValue(meta: ParamMetadata, context: Context): Promise<unknown> {
+  private static async getValue(meta: ParamMetadata, context: Context, container?: Container): Promise<unknown> {
     switch (meta.type) {
       case ParamType.BODY:
         return await this.getBodyValue(meta.key, context);
@@ -70,6 +76,32 @@ export class ParamBinder {
           throw new Error('@Header() decorator requires a key parameter');
         }
         return this.getHeaderValue(meta.key, context);
+      case ParamType.SESSION:
+        // Session 装饰器需要 container
+        if (!container) {
+          throw new Error('@Session() decorator requires a Container instance');
+        }
+        // 从 Context 中获取 Session（由中间件设置）
+        const session = (context as unknown as { session?: unknown }).session;
+        if (session) {
+          return session;
+        }
+        // 如果没有 Session，尝试创建新 Session
+        try {
+          const sessionService = container.resolve<SessionService>(
+            SESSION_SERVICE_TOKEN,
+          );
+          if (sessionService) {
+            const newSession = await sessionService.create();
+            (context as unknown as { session: typeof newSession }).session =
+              newSession;
+            (context as unknown as { sessionId: string }).sessionId = newSession.id;
+            return newSession;
+          }
+        } catch {
+          // SessionService 未注册，返回 undefined
+        }
+        return undefined;
       default:
         return undefined;
     }

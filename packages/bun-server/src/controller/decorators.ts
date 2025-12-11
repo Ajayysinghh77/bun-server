@@ -13,6 +13,7 @@ export enum ParamType {
   QUERY = 'query',
   PARAM = 'param',
   HEADER = 'header',
+  SESSION = 'session',
 }
 
 /**
@@ -30,7 +31,7 @@ export interface ParamMetadata {
  * @param key - 参数键（可选）
  * @returns 参数装饰器
  */
-function createParamDecorator(type: ParamType, key?: string) {
+export function createParamDecorator(type: ParamType, key?: string) {
   return function (target: any, propertyKey: string | symbol | undefined, parameterIndex: number) {
     const existingParams: ParamMetadata[] =
       Reflect.getMetadata(PARAM_METADATA_KEY, target, propertyKey as string) || [];

@@ -161,7 +161,7 @@ describe('Controller Integration', () => {
     }
 
     app.registerController(UserController);
-    app.listen();
+    await app.listen();
 
     // 测试 GET /
     const listResponse = await fetch(`http://localhost:${port}/api/users`);

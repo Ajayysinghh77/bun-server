@@ -32,11 +32,14 @@ export function createSessionMiddleware(
     let sessionId: string | undefined;
 
     if (cookieHeader) {
-      const cookie = cookieHeader
-        .split(';')
-        .find((c) => c.trim().startsWith(`${cookieName}=`));
-      if (cookie) {
-        sessionId = cookie.split('=')[1]?.trim();
+      // Cookie 格式: "name=value; name2=value2" 或 "name=value"
+      // 需要正确处理多个 Cookie 的情况
+      const cookies = cookieHeader.split(';').map((c) => c.trim());
+      for (const cookie of cookies) {
+        if (cookie.startsWith(`${cookieName}=`)) {
+          sessionId = cookie.substring(cookieName.length + 1).trim();
+          break;
+        }
       }
     }
 
@@ -62,7 +65,8 @@ export function createSessionMiddleware(
       sessionId = newSession.id;
     }
 
-    await next();
+    // 调用下一个中间件
+    const response = await next();
 
     // 设置或更新 Cookie
     const currentSessionId = (context as unknown as { sessionId?: string })
@@ -78,11 +82,18 @@ export function createSessionMiddleware(
           maxAge,
         },
       );
-      context.responseHeaders.set('Set-Cookie', cookieValue);
+      
+      // 创建新的 Response，添加 Set-Cookie 头
+      const newHeaders = new Headers(response.headers);
+      newHeaders.set('Set-Cookie', cookieValue);
+      
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders,
+      });
     }
 
-    // 确保返回 Response
-    const response = await next();
     return response;
   };
 }

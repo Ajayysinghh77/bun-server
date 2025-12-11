@@ -132,7 +132,7 @@ export class ControllerRegistry {
 
           // 绑定参数（从原型获取元数据，因为装饰器元数据保存在原型上）
           const prototype = controllerClass.prototype;
-          const params = await ParamBinder.bind(prototype, propertyKey!, context);
+          const params = await ParamBinder.bind(prototype, propertyKey!, context, controllerContainer);
 
           // 执行参数验证
           const validationMetadata = getValidationMetadata(prototype, propertyKey!);
