@@ -1,3 +1,7 @@
+---
+alwaysApply: true
+---
+
 # 版本发布和 Tag 管理规则
 
 本文档定义了 Bun Server Framework 项目的版本发布流程和 Tag 管理规范。
