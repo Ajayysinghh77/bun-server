@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 
-import { Controller } from '../../src/controller/controller';
-import { GET, POST } from '../../src/router/decorators';
+import { Controller, ControllerRegistry } from '../../src/controller/controller';
+import { GET } from '../../src/router/decorators';
 import { getRouteMetadata } from '../../src/controller/metadata';
 import { RouteRegistry } from '../../src/router/registry';
-import { Context } from '../../src/core/context';
 
 describe('Router Decorators', () => {
   afterEach(() => {
     RouteRegistry.getInstance().clear();
+    ControllerRegistry.getInstance().clear();
   });
 
   test('should record metadata for controller methods', () => {
@@ -27,22 +27,20 @@ describe('Router Decorators', () => {
     expect(typeof metadata[0]?.handler).toBe('function');
   });
 
-  test('should register handler immediately when not within controller', async () => {
+  test('should throw error when registering class without @Controller decorator', () => {
+    // 注意：由于装饰器应用顺序，@GET 装饰器会保存元数据，不会立即报错
     class PlainHandlers {
-      @POST('/plain')
-      public handler(context: Context) {
-        return context.createResponse({ ok: true });
+      @GET('/plain')
+      public handler() {
+        return { ok: true };
       }
     }
 
-    const registry = RouteRegistry.getInstance();
-    const router = registry.getRouter();
-    const request = new Request('http://localhost/plain', { method: 'POST' });
-    const context = new Context(request);
-    const response = await router.handle(context);
-
-    expect(response).toBeDefined();
-    expect(await response?.json()).toEqual({ ok: true });
+    // 但尝试注册时会报错，因为类没有 @Controller 装饰器
+    const registry = ControllerRegistry.getInstance();
+    expect(() => {
+      registry.register(PlainHandlers);
+    }).toThrow('Controller PlainHandlers must be decorated with @Controller()');
   });
 });
 
