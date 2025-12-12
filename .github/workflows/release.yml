@@ -43,6 +43,8 @@ jobs:
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         with:
           tag: ${{ steps.determine.outputs.tag }}
           release_name: ${{ steps.determine.outputs.tag }}
