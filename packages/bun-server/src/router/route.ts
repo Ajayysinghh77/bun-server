@@ -1,4 +1,5 @@
 import type { Context } from '../core/context';
+import type { Constructor } from '../core/types';
 import type { HttpMethod, RouteHandler, RouteMatch } from './types';
 import { MiddlewarePipeline } from '../middleware/pipeline';
 import type { Middleware } from '../middleware';
@@ -26,7 +27,7 @@ export class Route {
   /**
    * 控制器类（可选，用于控制器路由）
    */
-  public readonly controllerClass?: new (...args: unknown[]) => unknown;
+  public readonly controllerClass?: Constructor<unknown>;
 
   /**
    * 方法名（可选，用于控制器路由）
@@ -52,7 +53,7 @@ export class Route {
     path: string,
     handler: RouteHandler,
     middlewares: Middleware[] = [],
-    controllerClass?: new (...args: unknown[]) => unknown,
+    controllerClass?: Constructor<unknown>,
     methodName?: string,
   ) {
     this.method = method;
