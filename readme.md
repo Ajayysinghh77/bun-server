@@ -14,6 +14,7 @@
 - [Benchmark Suite](#benchmark-suite)
 - [Docs & Localization](#docs--localization)
 - [Roadmap](#roadmap)
+- [AI-Assisted Development](#ai-assisted-development)
 - [Engineering Guidelines](#engineering-guidelines)
 - [Contributing](#contributing)
 - [License](#license)
@@ -29,6 +30,9 @@
   provider that scales from MVP to enterprise.
 - **Well-tested**: unit, integration, stress and benchmark suites ship with the
   repo.
+- **AI-friendly**: source code and tests are included in the npm package,
+  enabling AI tools (like Cursor) to provide better code analysis, suggestions,
+  and understanding of the framework internals.
 
 ## Features
 
@@ -257,7 +261,9 @@ Or use `bun run bench*` scripts for convenience.
 ## Docs & Localization
 
 - **English** (default): `docs/api.md`, `docs/guide.md`,
-  `docs/best-practices.md`, `docs/migration.md`, `docs/extensions.md`.
+  `docs/best-practices.md`, `docs/migration.md`, `docs/extensions.md`,
+  `docs/deployment.md`, `docs/performance.md`, `docs/troubleshooting.md`,
+  `docs/error-handling.md`.
 - **Chinese**: mirrored under `docs/zh/`. If something is missing, please fall
   back to the English source.
 
@@ -265,6 +271,41 @@ Or use `bun run bench*` scripts for convenience.
 
 Detailed milestones and history are tracked in
 [`.roadmap/v0.3.0.md`](./.roadmap/v0.3.0.md).
+
+## AI-Assisted Development
+
+Bun Server is designed to work seamlessly with AI coding assistants like Cursor,
+GitHub Copilot, and others. The framework includes source code and tests in the
+npm package distribution, enabling AI tools to:
+
+- **Understand framework internals**: AI can analyze the actual implementation
+  code, not just type definitions, providing more accurate suggestions.
+- **Provide context-aware help**: When you ask about framework features, AI can
+  reference the actual source code to give precise answers.
+- **Suggest best practices**: AI can learn from the framework's patterns and
+  suggest similar approaches in your code.
+- **Debug more effectively**: AI can trace through the framework code to help
+  diagnose issues.
+
+### Best Practices for AI-Assisted Development
+
+1. **Reference framework source**: When working with Bun Server, AI tools can
+   access the source code at `node_modules/@dangao/bun-server/src/` to
+   understand implementation details.
+
+2. **Use type hints**: The framework provides comprehensive TypeScript types.
+   Leverage these in your code to help AI understand your intent better.
+
+3. **Follow framework patterns**: The included source code serves as a reference
+   for framework patterns. Ask AI to suggest code that follows similar patterns.
+
+4. **Leverage test examples**: The included test files demonstrate usage
+   patterns and edge cases. Reference these when asking AI for implementation
+   help.
+
+5. **Ask specific questions**: Since AI can access the framework source, you can
+   ask specific questions like "How does the DI container resolve dependencies?"
+   and get accurate answers based on the actual code.
 
 ## Engineering Guidelines
 
