@@ -1,4 +1,5 @@
 import type { Context } from '../core/context';
+import type { Constructor } from '../core/types';
 import { Route } from './route';
 import type { HttpMethod, RouteHandler, RouteMatch } from './types';
 import type { Middleware } from '../middleware';
@@ -45,7 +46,7 @@ export class Router {
     path: string,
     handler: RouteHandler,
     middlewares: Middleware[] = [],
-    controllerClass?: new (...args: unknown[]) => unknown,
+    controllerClass?: Constructor<unknown>,
     methodName?: string,
   ): void {
     // 规范化路径

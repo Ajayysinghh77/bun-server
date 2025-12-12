@@ -197,7 +197,7 @@ class MyInterceptor extends BaseInterceptor {
 
 ```typescript
 // Get metadata from method
-const metadata = this.getMetadata<MyOptions>(MY_METADATA_KEY, target, propertyKey);
+const metadata = this.getMetadata<MyOptions>(target, propertyKey, MY_METADATA_KEY);
 
 // Resolve service from container
 const service = this.resolveService<MyService>(container, MyService);
@@ -270,12 +270,49 @@ Reflect.defineMetadata(METADATA_KEY, { value: 'data' }, target, propertyKey);
 
 ### Reading Metadata
 
+**Important**: Decorators store metadata on the prototype (class), not on instances. When reading metadata from an interceptor, you need to handle this correctly.
+
+**Option 1: Use `BaseInterceptor.getMetadata()` (Recommended)**
+
 ```typescript
-// Read metadata
-const metadata = Reflect.getMetadata(METADATA_KEY, target, propertyKey);
+class MyInterceptor extends BaseInterceptor {
+  public async execute<T>(...): Promise<T> {
+    // getMetadata() automatically handles prototype chain lookup
+    const metadata = this.getMetadata<MyOptions>(target, propertyKey, METADATA_KEY);
+  }
+}
+```
+
+**Option 2: Manual prototype chain lookup**
+
+If you're not using `BaseInterceptor`, you need to manually check the prototype chain:
+
+```typescript
+// Read metadata (handles both instance and prototype)
+let metadata: MyOptions | undefined;
+if (typeof target === 'object' && target !== null) {
+  // First try direct lookup (if target is prototype)
+  metadata = Reflect.getMetadata(METADATA_KEY, target, propertyKey);
+  
+  // If not found and target is an instance, check prototype
+  if (metadata === undefined) {
+    const prototype = Object.getPrototypeOf(target);
+    if (prototype && prototype !== Object.prototype) {
+      metadata = Reflect.getMetadata(METADATA_KEY, prototype, propertyKey);
+    }
+    
+    // Also check constructor prototype as fallback
+    if (metadata === undefined) {
+      const constructor = (target as any).constructor;
+      if (constructor && typeof constructor === 'function' && constructor.prototype) {
+        metadata = Reflect.getMetadata(METADATA_KEY, constructor.prototype, propertyKey);
+      }
+    }
+  }
+}
 
 // Check if metadata exists
-const exists = Reflect.hasMetadata(METADATA_KEY, target, propertyKey);
+const exists = metadata !== undefined;
 ```
 
 ### Metadata in Interceptors
@@ -284,7 +321,8 @@ const exists = Reflect.hasMetadata(METADATA_KEY, target, propertyKey);
 class MyInterceptor extends BaseInterceptor {
   public async execute<T>(...): Promise<T> {
     // Get metadata using helper method
-    const options = this.getMetadata<MyOptions>(MY_METADATA_KEY, target, propertyKey);
+    // Note: getMetadata() signature is (target, propertyKey, metadataKey)
+    const options = this.getMetadata<MyOptions>(target, propertyKey, MY_METADATA_KEY);
 
     if (options) {
       // Use options
@@ -314,7 +352,7 @@ export function Log(message?: string): MethodDecorator {
 
 export class LogInterceptor extends BaseInterceptor {
   public async execute<T>(...): Promise<T> {
-    const metadata = this.getMetadata<{ message?: string }>(LOG_METADATA_KEY, target, propertyKey);
+    const metadata = this.getMetadata<{ message?: string }>(target, propertyKey, LOG_METADATA_KEY);
     const logMessage = metadata?.message || `Executing ${String(propertyKey)}`;
 
     console.log(`[LOG] ${logMessage} - Start`);
@@ -359,7 +397,7 @@ export class RateLimitInterceptor extends BaseInterceptor {
   private readonly requests = new Map<string, number[]>();
 
   public async execute<T>(...): Promise<T> {
-    const options = this.getMetadata<RateLimitOptions>(RATE_LIMIT_METADATA_KEY, target, propertyKey);
+    const options = this.getMetadata<RateLimitOptions>(target, propertyKey, RATE_LIMIT_METADATA_KEY);
     if (!options || !context) {
       return await Promise.resolve(originalMethod.apply(target, args));
     }

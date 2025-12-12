@@ -1,4 +1,5 @@
 import { Router } from './router';
+import type { Constructor } from '../core/types';
 import type { HttpMethod, RouteHandler } from './types';
 import type { Middleware } from '../middleware';
 
@@ -39,7 +40,7 @@ export class RouteRegistry {
     path: string,
     handler: RouteHandler,
     middlewares: Middleware[] = [],
-    controllerClass?: new (...args: unknown[]) => unknown,
+    controllerClass?: Constructor<unknown>,
     methodName?: string,
   ): void {
     this.router.register(method, path, handler, middlewares, controllerClass, methodName);

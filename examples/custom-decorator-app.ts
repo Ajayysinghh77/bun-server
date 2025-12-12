@@ -85,7 +85,30 @@ class TimingInterceptor implements Interceptor {
     context?: Context,
   ): Promise<T> {
     // Get metadata
-    const metadata = Reflect.getMetadata(TIMING_METADATA_KEY, target, propertyKey) as TimingOptions | undefined;
+    // Note: Decorators store metadata on the prototype, not on instances
+    // If target is an instance, we need to check the prototype chain
+    let metadata: TimingOptions | undefined;
+    if (typeof target === 'object' && target !== null) {
+      // First try direct lookup (if target is prototype)
+      metadata = Reflect.getMetadata(TIMING_METADATA_KEY, target, propertyKey) as TimingOptions | undefined;
+      
+      // If not found and target is an instance, check prototype
+      if (metadata === undefined) {
+        const prototype = Object.getPrototypeOf(target);
+        if (prototype && prototype !== Object.prototype) {
+          metadata = Reflect.getMetadata(TIMING_METADATA_KEY, prototype, propertyKey) as TimingOptions | undefined;
+        }
+        
+        // Also check constructor prototype as fallback
+        if (metadata === undefined) {
+          const constructor = (target as any).constructor;
+          if (constructor && typeof constructor === 'function' && constructor.prototype) {
+            metadata = Reflect.getMetadata(TIMING_METADATA_KEY, constructor.prototype, propertyKey) as TimingOptions | undefined;
+          }
+        }
+      }
+    }
+    
     const label = metadata?.label || String(propertyKey);
 
     // Start timing

@@ -53,7 +53,7 @@ class LogInterceptor extends BaseInterceptor {
     container: Container,
     context?: Context,
   ): Promise<T> {
-    const options = this.getMetadata<LogOptions>(LOG_METADATA_KEY, target, propertyKey) || {};
+    const options = this.getMetadata<LogOptions>(target, propertyKey, LOG_METADATA_KEY) || {};
     const level = options.level || 'info';
     const methodName = String(propertyKey);
 
@@ -84,7 +84,7 @@ class LogInterceptor extends BaseInterceptor {
     }
   }
 
-  protected async onError(
+  protected override async onError(
     target: unknown,
     propertyKey: string | symbol,
     error: unknown,
@@ -123,7 +123,7 @@ class AuthInterceptor extends BaseInterceptor {
     container: Container,
     context?: Context,
   ): Promise<T> {
-    const options = this.getMetadata<AuthOptions>(AUTH_METADATA_KEY, target, propertyKey) || {};
+    const options = this.getMetadata<AuthOptions>(target, propertyKey, AUTH_METADATA_KEY) || {};
 
     if (!context) {
       // No context available, proceed
@@ -212,7 +212,7 @@ class CacheInterceptor extends BaseInterceptor {
     container: Container,
     context?: Context,
   ): Promise<T> {
-    const options = this.getMetadata<CacheOptions>(CACHE_METADATA_KEY, target, propertyKey) || {};
+    const options = this.getMetadata<CacheOptions>(target, propertyKey, CACHE_METADATA_KEY) || {};
     const ttl = options.ttl || 60000; // Default 1 minute
 
     // Resolve cache service from container

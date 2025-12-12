@@ -33,7 +33,7 @@ export interface ControllerMetadata {
   /**
    * 控制器类
    */
-  target: new (...args: unknown[]) => unknown;
+  target: Constructor<unknown>;
 }
 
 /**
@@ -55,7 +55,7 @@ export function Controller(path: string = '') {
 export class ControllerRegistry {
   private static instance: ControllerRegistry;
   private readonly container: Container;
-  private readonly controllers = new Map<new (...args: unknown[]) => unknown, unknown>();
+  private readonly controllers = new Map<Constructor<unknown>, unknown>();
   private readonly controllerContainers = new Map<Constructor<unknown>, Container>();
 
   private constructor() {
@@ -148,10 +148,10 @@ export class ControllerRegistry {
 
           // 调用控制器方法
           // 优先从实例获取，如果不存在则从原型获取
+          // 注意：prototype 已在上面声明（第 140 行），因为后续扫描拦截器元数据时需要用到
           let method = (controllerInstance as Record<string, (...args: unknown[]) => unknown>)[propertyKey!];
           if (!method || typeof method !== 'function') {
             // 从构造函数原型获取方法
-            const prototype = controllerClass.prototype;
             method = prototype[propertyKey!];
           }
           if (!method || typeof method !== 'function') {

@@ -50,13 +50,23 @@ export class InterceptorChain {
       const interceptor = interceptors[index++];
       
       // 执行当前拦截器，传递 next 作为下一个执行函数
+      // 注意：拦截器接口要求 originalMethod 的类型是 (...args: unknown[]) => T | Promise<T>
+      // 这允许原始方法可以是同步（返回 T）或异步（返回 Promise<T>）
+      // 虽然 next 函数是异步的（总是返回 Promise<T>），但我们保持类型签名为 T | Promise<T>
+      // 以符合拦截器接口的要求。拦截器应该使用 Promise.resolve() 来统一处理同步和异步返回值
+      const wrappedNext = (...nextArgs: unknown[]): T | Promise<T> => {
+        // 如果拦截器传递了新参数，传递给 next；否则传递 undefined（使用当前参数）
+        // next 是异步函数，总是返回 Promise<T>，但类型签名允许 T | Promise<T>
+        const result = next(nextArgs.length > 0 ? nextArgs : undefined);
+        // 类型断言：虽然 result 总是 Promise<T>，但类型系统允许我们将其视为 T | Promise<T>
+        // 因为 Promise<T> 在运行时可以表示同步值（通过 Promise.resolve(syncValue)）
+        return result as T | Promise<T>;
+      };
+      
       return await interceptor.execute(
         target,
         propertyKey,
-        async (...nextArgs: unknown[]) => {
-          // 如果拦截器传递了新参数，传递给 next；否则传递 undefined（使用当前参数）
-          return await next(nextArgs.length > 0 ? nextArgs : undefined);
-        },
+        wrappedNext,
         currentArgs, // Pass current args to the interceptor
         container,
         context,

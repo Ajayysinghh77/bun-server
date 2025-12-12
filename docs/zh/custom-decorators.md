@@ -212,10 +212,11 @@ class MyInterceptor extends BaseInterceptor {
 
 ```typescript
 // 从方法获取元数据
+// 注意：getMetadata() 的签名是 (target, propertyKey, metadataKey)
 const metadata = this.getMetadata<MyOptions>(
-  MY_METADATA_KEY,
   target,
   propertyKey,
+  MY_METADATA_KEY,
 );
 
 // 从容器解析服务
@@ -289,12 +290,56 @@ Reflect.defineMetadata(METADATA_KEY, { value: "data" }, target, propertyKey);
 
 ### 读取元数据
 
+**重要**：装饰器将元数据存储在原型（类）上，而不是实例上。在拦截器中读取元数据时，需要正确处理这一点。
+
+**方式 1：使用 `BaseInterceptor.getMetadata()`（推荐）**
+
 ```typescript
-// 读取元数据
-const metadata = Reflect.getMetadata(METADATA_KEY, target, propertyKey);
+class MyInterceptor extends BaseInterceptor {
+  public async execute<T>(...): Promise<T> {
+    // getMetadata() 自动处理原型链查找
+    const metadata = this.getMetadata<MyOptions>(target, propertyKey, METADATA_KEY);
+  }
+}
+```
+
+**方式 2：手动原型链查找**
+
+如果不使用 `BaseInterceptor`，需要手动检查原型链：
+
+```typescript
+// 读取元数据（处理实例和原型）
+let metadata: MyOptions | undefined;
+if (typeof target === "object" && target !== null) {
+  // 首先尝试直接查找（如果 target 是原型）
+  metadata = Reflect.getMetadata(METADATA_KEY, target, propertyKey);
+
+  // 如果未找到且 target 是实例，检查原型
+  if (metadata === undefined) {
+    const prototype = Object.getPrototypeOf(target);
+    if (prototype && prototype !== Object.prototype) {
+      metadata = Reflect.getMetadata(METADATA_KEY, prototype, propertyKey);
+    }
+
+    // 也检查构造函数原型作为后备
+    if (metadata === undefined) {
+      const constructor = (target as any).constructor;
+      if (
+        constructor && typeof constructor === "function" &&
+        constructor.prototype
+      ) {
+        metadata = Reflect.getMetadata(
+          METADATA_KEY,
+          constructor.prototype,
+          propertyKey,
+        );
+      }
+    }
+  }
+}
 
 // 检查元数据是否存在
-const exists = Reflect.hasMetadata(METADATA_KEY, target, propertyKey);
+const exists = metadata !== undefined;
 ```
 
 ### 拦截器中的元数据
@@ -303,7 +348,8 @@ const exists = Reflect.hasMetadata(METADATA_KEY, target, propertyKey);
 class MyInterceptor extends BaseInterceptor {
   public async execute<T>(...): Promise<T> {
     // 使用辅助方法获取元数据
-    const options = this.getMetadata<MyOptions>(MY_METADATA_KEY, target, propertyKey);
+    // 注意：getMetadata() 的签名是 (target, propertyKey, metadataKey)
+    const options = this.getMetadata<MyOptions>(target, propertyKey, MY_METADATA_KEY);
 
     if (options) {
       // 使用选项
@@ -333,7 +379,7 @@ export function Log(message?: string): MethodDecorator {
 
 export class LogInterceptor extends BaseInterceptor {
   public async execute<T>(...): Promise<T> {
-    const metadata = this.getMetadata<{ message?: string }>(LOG_METADATA_KEY, target, propertyKey);
+    const metadata = this.getMetadata<{ message?: string }>(target, propertyKey, LOG_METADATA_KEY);
     const logMessage = metadata?.message || `执行 ${String(propertyKey)}`;
 
     console.log(`[LOG] ${logMessage} - 开始`);
@@ -378,7 +424,7 @@ export class RateLimitInterceptor extends BaseInterceptor {
   private readonly requests = new Map<string, number[]>();
 
   public async execute<T>(...): Promise<T> {
-    const options = this.getMetadata<RateLimitOptions>(RATE_LIMIT_METADATA_KEY, target, propertyKey);
+    const options = this.getMetadata<RateLimitOptions>(target, propertyKey, RATE_LIMIT_METADATA_KEY);
     if (!options || !context) {
       return await Promise.resolve(originalMethod.apply(target, args));
     }

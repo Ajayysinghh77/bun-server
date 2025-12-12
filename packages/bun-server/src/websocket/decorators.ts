@@ -36,8 +36,10 @@ export const OnOpen = createHandlerDecorator('open');
 export const OnMessage = createHandlerDecorator('message');
 export const OnClose = createHandlerDecorator('close');
 
+import type { Constructor } from '../core/types';
+
 export function getGatewayMetadata(
-  constructor: new (...args: unknown[]) => unknown,
+  constructor: Constructor<unknown>,
 ): WebSocketGatewayMetadata | undefined {
   return Reflect.getMetadata(GATEWAY_METADATA_KEY, constructor);
 }
