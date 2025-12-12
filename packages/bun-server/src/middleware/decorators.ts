@@ -69,8 +69,6 @@ export function RateLimit(options: RateLimitOptions): MethodDecorator {
  * @param constructor - 控制器构造函数
  * @returns 中间件列表
  */
-import type { Constructor } from '../core/types';
-
 export function getClassMiddlewares(constructor: Constructor<unknown>): Middleware[] {
   return (
     (Reflect.getMetadata(CLASS_MIDDLEWARE_METADATA_KEY, constructor) as Middleware[]) || []
