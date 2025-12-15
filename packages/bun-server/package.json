@@ -1,6 +1,6 @@
 {
   "name": "@dangao/bun-server",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,7 +28,8 @@
     "readme.md",
     "LICENSE",
     "src",
-    "tests"
+    "tests",
+    "docs"
   ],
   "author": "dangaogit",
   "license": "MIT",
@@ -48,7 +49,7 @@
     "dts": "tsc -p tsconfig.build.json",
     "build": "bun run clean && bun run bundle && bun run dts",
     "prepare": "bun run build",
-    "publish:package": "cp ../../readme.md ../../LICENSE . && bun publish --access public && rm -f ./readme.md ./LICENSE"
+    "publish:package": "cp -r ../../readme.md ../../LICENSE ../../docs . && bun publish --access public && rm -rf ./readme.md ./LICENSE ./docs"
   },
   "devDependencies": {
     "typescript": "catalog:",
