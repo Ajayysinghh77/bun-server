@@ -26,12 +26,20 @@ alwaysApply: true
 
 ### 2. 构建制品
 
+**注意**：`package.json` 中已配置 `prepublishOnly` 生命周期钩子，会在 `bun publish` 时自动运行构建。但为了确保构建成功，建议手动构建并验证：
+
 ```bash
 cd packages/bun-server
 bun run build
 ```
 
 确保构建成功，检查 `dist/` 目录。
+
+**重要**：
+- `prepublishOnly` 脚本会在 `bun publish` 时自动运行，确保发布前构建
+- `prepublishOnly` 不会在 `bun install` 时运行，避免首次安装时构建失败
+- 使用 `bun run publish:package` 脚本进行发布（包含复制文档等操作）
+- 直接使用 `bun publish` 也会自动构建（通过 `prepublishOnly` 钩子）
 
 ### 3. 创建 Changelog
 
